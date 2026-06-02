@@ -108,29 +108,35 @@ function LineChart({series,w=300,h=110}:{series:{data:number[];color:string;labe
 function ColChart({data,colors,w=300,h=110,showVals=true}:{data:{label:string;value:number}[];colors?:string[];w?:number;h?:number;showVals?:boolean}){
   if(!data.length)return null;
   const max=Math.max(...data.map(d=>d.value),1);
-  const padB=20,padT=20,padH=8;
-  const cw=w-padH*2,ch=h-padT-padB;
-  const bw=Math.max(12,(cw/data.length)*0.6);
+  const padT=32,padH=4;
+  const cw=w-padH*2,ch=h-padT;
+  const bw=Math.floor((cw/data.length)*0.82);
   const gap=cw/data.length;
   return(
     <Svg width={w} height={h}>
       <Line x1={padH} y1={padT+ch} x2={w-padH} y2={padT+ch} stroke={D.border} strokeWidth={1}/>
       {data.map((d,i)=>{
-        const bh=Math.max(4,(d.value/max)*ch);
-        const cx=padH+gap*i+gap/2;
+        const bh=Math.max(10,(d.value/max)*ch);
+        const bx=padH+gap*i+gap/2-bw/2;
+        const by=padT+ch-bh;
         const col=colors?colors[i%colors.length]:D.accent;
+        const fs=Math.max(13,Math.min(20,bw*0.48));
+        const tx=bx+bw/2;
+        const ty=padT+ch-4;
         return(
           <G key={i}>
-            <Rect x={cx-bw/2} y={padT+ch-bh} width={bw} height={bh} fill={col} rx={3} opacity={0.9}/>
-            {showVals&&<ST x={cx} y={padT+ch-bh-5} textAnchor="middle" fontSize={11} fill={col} fontWeight="bold">{d.value}</ST>}
-            <ST x={cx} y={h-4} textAnchor="middle" fontSize={10} fill={D.sub}>{d.label.length>7?d.label.slice(0,6)+'…':d.label}</ST>
+            <Rect x={bx} y={by} width={bw} height={bh} fill={col} opacity={0.92}/>
+            <ST x={tx} y={by-6} textAnchor="middle" fontSize={fs*0.9} fill={col} fontWeight="800">{d.value}</ST>
+            <ST x={0} y={0} fontSize={fs} fill={D.bg} fontWeight="800"
+              transform={`translate(${tx}, ${ty}) rotate(-90) translate(6, ${bw*0.35})`}>
+              {d.label}
+            </ST>
           </G>
         );
       })}
     </Svg>
   );
 }
-
 // ── Horizontal Bars ───────────────────────────────────────────────
 function HBars({data,w=280,h=120}:{data:{label:string;value:number;color:string;max?:number}[];w?:number;h?:number}){
   const globalMax=Math.max(...data.map(d=>d.max??d.value),1);
@@ -145,8 +151,8 @@ function HBars({data,w=280,h=120}:{data:{label:string;value:number;color:string;
         return(
           <G key={i}>
             <ST x={padL-6} y={y+bh*0.75} textAnchor="end" fontSize={11} fill={D.sub}>{d.label}</ST>
-            <Rect x={padL} y={y} width={w-padL-padR} height={bh} fill={D.border} rx={3}/>
-            <Rect x={padL} y={y} width={Math.max(4,bw)} height={bh} fill={d.color} rx={3} opacity={0.9}/>
+            <Rect x={padL} y={y} width={w-padL-padR} height={bh} fill={D.border} rx={0}/>
+            <Rect x={padL} y={y} width={Math.max(4,bw)} height={bh} fill={d.color} rx={0} opacity={0.9}/>
             <ST x={padL+bw+5} y={y+bh*0.75} textAnchor="start" fontSize={11} fill={d.color} fontWeight="bold">{d.value}</ST>
           </G>
         );
@@ -198,7 +204,7 @@ function DonutChart({slices,size=110,label,sublabel}:{slices:{value:number;color
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,justifyContent:'center'}}>
         {slices.map((sl,i)=>(
           <View key={i} style={{flexDirection:'row',alignItems:'center',gap:4}}>
-            <View style={{width:9,height:9,borderRadius:5,backgroundColor:sl.color}}/>
+            <View style={{width:9,height:9,backgroundColor:sl.color}}/>
             <Text style={{color:D.sub,fontSize:11}}>{sl.label} <Text style={{color:sl.color,fontWeight:'700'}}>{sl.value}</Text></Text>
           </View>
         ))}
@@ -233,7 +239,7 @@ function RadialBars({items,size=120}:{items:{label:string;pct:number;color:strin
       <View style={{gap:4}}>
         {rings.map((item,i)=>(
           <View key={i} style={{flexDirection:'row',alignItems:'center',gap:6}}>
-            <View style={{width:10,height:10,borderRadius:5,backgroundColor:item.color}}/>
+            <View style={{width:10,height:10,backgroundColor:item.color}}/>
             <Text style={{color:D.sub,fontSize:12,width:90}} numberOfLines={1}>{item.label}</Text>
             <Text style={{color:item.color,fontSize:13,fontWeight:'800'}}>{Math.round(item.pct)}%</Text>
           </View>
@@ -561,7 +567,7 @@ function TabSchedule({p,data}:{p:Project;data:SheetData}){
           <View style={{gap:8,marginTop:4}}>
             {active.map(m=>(
               <View key={m.milestone_id} style={{flexDirection:'row',alignItems:'flex-start',gap:8}}>
-                <View style={{width:8,height:8,borderRadius:4,backgroundColor:sColor(m.status),marginTop:3}}/>
+                <View style={{width:8,height:8,backgroundColor:sColor(m.status),marginTop:3}}/>
                 <View style={{flex:1}}>
                   <Text style={{color:D.text,fontSize:13,fontWeight:'600'}} numberOfLines={1}>{m.milestone_name}</Text>
                   <Text style={{color:D.muted,fontSize:11}}>{m.phase} · {fmtPct(Number(m.progress_pct))}</Text>
@@ -666,7 +672,7 @@ function TabReports({p,data}:{p:Project;data:SheetData}){
               <View key={r.report_id} style={{flexDirection:'row',alignItems:'center',gap:8,borderBottomWidth:1,borderBottomColor:D.border,paddingBottom:6}}>
                 <Text style={{color:D.muted,fontSize:12,minWidth:80}}>{r.date}</Text>
                 <Text style={{flex:1,color:D.text,fontSize:13}} numberOfLines={1}>{r.work_summary||'—'}</Text>
-                {Number(r.incidents)>0&&<View style={{backgroundColor:D.redDim,paddingHorizontal:8,paddingVertical:2,borderRadius:4}}>
+                {Number(r.incidents)>0&&<View style={{backgroundColor:D.redDim,paddingHorizontal:8,paddingVertical:2,}}>
                   <Text style={{color:D.red,fontSize:11,fontWeight:'700'}}>⚠ {r.incidents}</Text>
                 </View>}
               </View>
@@ -690,7 +696,8 @@ const TABS=[
 ];
 
 // ── Project Row ───────────────────────────────────────────────────
-// ── TV Collage — все данные в одном экране без скролла ────────────
+
+// ── TV Collage ─────────────────────────────────────────────────────
 function TVCollage({p,data}:{p:Project;data:SheetData}){
   const spent=Number(p.spent_to_date_usd),total=Number(p.total_budget_usd);
   const bPct=total>0?(spent/total)*100:0;
@@ -708,7 +715,7 @@ function TVCollage({p,data}:{p:Project;data:SheetData}){
   const wActive=workers.filter(w=>w.status==='Active').length;
   const byDept:Record<string,number>={};
   workers.forEach(w=>{byDept[w.department]=(byDept[w.department]??0)+1;});
-  const topDepts=Object.entries(byDept).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topDepts=Object.entries(byDept).sort((a,b)=>b[1]-a[1]).slice(0,6);
 
   const eq=data.equipment.filter(e=>e.project_id===p.project_id);
   const eqActive=eq.filter(e=>e.status==='Active').length;
@@ -723,123 +730,115 @@ function TVCollage({p,data}:{p:Project;data:SheetData}){
   ms.forEach(m=>{if(!byPhase[m.phase])byPhase[m.phase]={total:0,done:0};byPhase[m.phase].total++;if(['Done','Completed'].includes(m.status))byPhase[m.phase].done++;});
   const phaseRings=Object.entries(byPhase).map(([label,v],i)=>({label,pct:v.total>0?(v.done/v.total)*100:0,color:[D.green,D.blue,D.accent,D.orange][i%4]}));
 
-  // Mini card wrapper
-  const Cell=({children,style}:{children:React.ReactNode;style?:any})=>(
-    <View style={[ss.cell,style]}>{children}</View>
-  );
+  const CH=290;
 
   return(
     <View style={ss.collage}>
 
-      {/* ── Col 1: KPI stats (vertical stack) ── */}
+      {/* Col 1: KPI stack */}
       <View style={ss.colKpi}>
         {[
-          {v:fmtPct(prog), l:'PROGRESS',  c:D.blue,         s:p.start_date+'→'+p.end_date},
-          {v:String(cpi),  l:'CPI',        c:iColor(cpi),    s:cpi>=1?'✓ on cost':'⚠ overrun'},
-          {v:String(spi),  l:'SPI',        c:iColor(spi),    s:spi>=1?'✓ on time':'⚠ delayed'},
-          {v:fmtPct(bPct), l:'BUDGET',     c:bColor,         s:fmt$M(spent)+' / '+fmt$M(total)},
-          {v:String(issues.filter(i=>i.status==='Open').length), l:'OPEN ISSUES', c:openH>0?D.red:D.orange, s:'H:'+openH+' M:'+openM+' L:'+openL},
-          {v:String(workers.length), l:'WORKERS',   c:D.text, s:wActive+' active'},
-          {v:String(eq.length),      l:'EQUIPMENT', c:D.text, s:eqActive+' active'},
-          {v:msDone+'/'+ms.length,   l:'MILESTONES',c:D.green,s:msDelayed+' delayed'},
+          {v:fmtPct(prog), l:'PROGRESS',   c:D.blue,      s:p.end_date},
+          {v:String(cpi),  l:'CPI',         c:iColor(cpi), s:cpi>=1?'✓ on cost':'⚠ overrun'},
+          {v:String(spi),  l:'SPI',         c:iColor(spi), s:spi>=1?'✓ on time':'⚠ delayed'},
+          {v:fmtPct(bPct), l:'BUDGET USED', c:bColor,      s:fmt$M(spent)+' / '+fmt$M(total)},
+          {v:String(issues.filter(i=>i.status==='Open').length),l:'OPEN ISSUES',c:openH>0?D.red:openM>0?D.orange:D.green,s:'H:'+openH+' M:'+openM},
+          {v:String(workers.length),l:'WORKERS',  c:D.text, s:wActive+' active'},
+          {v:String(eq.length),     l:'EQUIPMENT',c:D.text, s:eqActive+' active'},
+          {v:msDone+'/'+ms.length,  l:'MILESTONES',c:D.green,s:msDelayed>0?msDelayed+' delayed':'on track'},
         ].map(({v,l,c,s})=>(
           <View key={l} style={ss.kpiCell}>
             <Text style={[ss.kpiV,{color:c}]}>{v}</Text>
             <Text style={ss.kpiL}>{l}</Text>
-            {s&&<Text style={ss.kpiS}>{s}</Text>}
+            <Text style={ss.kpiS}>{s}</Text>
           </View>
         ))}
       </View>
 
-      {/* ── Col 2: S-Curve (tall) ── */}
+      {/* Col 2: S-Curve */}
       {evm.length>=2&&(
-        <Cell style={{flex:1.4}}>
+        <View style={[ss.cell,{flex:1.5}]}>
           <SL t="S-CURVE  (EV · PV · AC, $M)"/>
-          <View style={{flex:1,justifyContent:'center'}}>
-            <LineChart
-              series={[
-                {data:evm.map(e=>Number(e.pv_usd)/1e6),color:D.muted, label:'PV'},
-                {data:evm.map(e=>Number(e.ev_usd)/1e6),color:D.green, label:'EV'},
-                {data:evm.map(e=>Number(e.ac_usd)/1e6),color:D.orange,label:'AC'},
-              ]}
-              w={260} h={200}
-            />
-          </View>
+          <LineChart
+            series={[
+              {data:evm.map(e=>Number(e.pv_usd)/1e6),color:D.muted, label:'PV'},
+              {data:evm.map(e=>Number(e.ev_usd)/1e6),color:D.green, label:'EV'},
+              {data:evm.map(e=>Number(e.ac_usd)/1e6),color:D.orange,label:'AC'},
+            ]}
+            w={300} h={CH}
+          />
           <View style={ss.legend}>
             {([['PV',D.muted],['EV',D.green],['AC',D.orange]] as [string,string][]).map(([l,c])=>(
               <View key={l} style={ss.legItem}><View style={[ss.legDot,{backgroundColor:c}]}/><Text style={ss.legTxt}>{l}</Text></View>
             ))}
           </View>
-        </Cell>
+        </View>
       )}
 
-      {/* ── Col 3: CPI/SPI trend (tall) ── */}
+      {/* Col 3: CPI/SPI trend */}
       {evm.length>=2&&(
-        <Cell style={{flex:1.1}}>
+        <View style={[ss.cell,{flex:1.2}]}>
           <SL t="CPI / SPI TREND"/>
-          <View style={{flex:1,justifyContent:'center'}}>
-            <LineChart
-              series={[
-                {data:evm.map(e=>Number(e.cpi)),color:iColor(cpi),label:'CPI'},
-                {data:evm.map(e=>Number(e.spi)),color:D.blue,     label:'SPI'},
-              ]}
-              w={200} h={200}
-            />
-          </View>
+          <LineChart
+            series={[
+              {data:evm.map(e=>Number(e.cpi)),color:iColor(cpi),label:'CPI'},
+              {data:evm.map(e=>Number(e.spi)),color:D.blue,     label:'SPI'},
+            ]}
+            w={240} h={CH}
+          />
           <View style={ss.legend}>
             {([['CPI',iColor(cpi)],['SPI',D.blue]] as [string,string][]).map(([l,c])=>(
               <View key={l} style={ss.legItem}><View style={[ss.legDot,{backgroundColor:c}]}/><Text style={ss.legTxt}>{l}</Text></View>
             ))}
           </View>
-        </Cell>
+        </View>
       )}
 
-      {/* ── Col 4: Workers by dept (column chart) ── */}
+      {/* Col 4: Workforce bars */}
       {topDepts.length>0&&(
-        <Cell style={{flex:1.1}}>
+        <View style={[ss.cell,{flex:1.2}]}>
           <SL t="WORKFORCE BY DEPT"/>
-          <View style={{flex:1,justifyContent:'center'}}>
-            <ColChart data={topDepts.map(([label,value])=>({label,value}))} colors={[D.accent,D.blue,D.green,D.orange,D.yellow]} w={200} h={190}/>
-          </View>
-        </Cell>
+          <ColChart
+            data={topDepts.map(([label,value])=>({label,value}))}
+            colors={[D.accent,D.blue,D.green,D.orange,D.yellow,'#e91e63']}
+            w={240} h={CH}
+          />
+        </View>
       )}
 
-      {/* ── Col 5: two donuts stacked ── */}
-      <View style={[ss.cell,{flex:0.85,gap:8,justifyContent:'space-around'}]}>
-        <View style={{alignItems:'center'}}>
+      {/* Col 5: Issues + Equipment donuts */}
+      <View style={[ss.cell,{flex:1,justifyContent:'space-around',alignItems:'center',overflow:'hidden'}]}>
+        <View style={{alignItems:'center',gap:4}}>
           <SL t="ISSUES"/>
-          <DonutChart size={110} label={String(issues.length)} sublabel="total"
+          <DonutChart size={130} label={String(issues.length)} sublabel="total"
             slices={[{value:openH,color:D.red,label:'H'},{value:openM,color:D.orange,label:'M'},{value:openL,color:D.yellow,label:'L'},{value:closedI,color:D.green,label:'✓'}]}/>
         </View>
-        <View style={{alignItems:'center'}}>
+        <View style={{alignItems:'center',gap:4}}>
           <SL t="EQUIPMENT"/>
-          <DonutChart size={110} label={String(eqActive)} sublabel="active"
+          <DonutChart size={130} label={String(eqActive)} sublabel="active"
             slices={[{value:eqActive,color:D.blue,label:'Active'},{value:eqMaint,color:D.orange,label:'Maint'},{value:eq.length-eqActive-eqMaint,color:D.muted,label:'Idle'}]}/>
         </View>
       </View>
 
-      {/* ── Col 6: Schedule phases radial ── */}
+      {/* Col 6: Schedule phases radial */}
       {phaseRings.length>0&&(
-        <Cell style={{flex:0.9}}>
+        <View style={[ss.cell,{flex:0.95,alignItems:'center',justifyContent:'center'}]}>
           <SL t="SCHEDULE PHASES"/>
-          <View style={{flex:1,justifyContent:'center',alignItems:'center'}}>
-            <RadialBars items={phaseRings} size={160}/>
-          </View>
-        </Cell>
+          <RadialBars items={phaseRings} size={200}/>
+        </View>
       )}
 
-      {/* ── Col 7: Milestone donut ── */}
-      <Cell style={{flex:0.85}}>
+      {/* Col 7: Milestone donut */}
+      <View style={[ss.cell,{flex:0.85,alignItems:'center',justifyContent:'center'}]}>
         <SL t="MILESTONES"/>
-        <View style={{flex:1,justifyContent:'center',alignItems:'center'}}>
-          <DonutChart size={130} label={msDone+'/'+ms.length} sublabel="done"
-            slices={[{value:msDone,color:D.green,label:'Done'},{value:msInProg,color:D.blue,label:'Active'},{value:msDelayed,color:D.red,label:'Delayed'},{value:ms.length-msDone-msInProg-msDelayed,color:D.muted,label:'Pending'}]}/>
-        </View>
-      </Cell>
+        <DonutChart size={160} label={msDone+'/'+ms.length} sublabel="done"
+          slices={[{value:msDone,color:D.green,label:'Done'},{value:msInProg,color:D.blue,label:'Active'},{value:msDelayed,color:D.red,label:'Delayed'},{value:ms.length-msDone-msInProg-msDelayed,color:D.muted,label:'Pending'}]}/>
+      </View>
 
     </View>
   );
 }
+
 
 function ProjectRow({p,data}:{p:Project;data:SheetData}){
   const prog=Number(p.progress_pct);
@@ -850,7 +849,7 @@ function ProjectRow({p,data}:{p:Project;data:SheetData}){
       {/* Sidebar */}
       <View style={ss.sidebar}>
         <View style={{flexDirection:'row',alignItems:'center',gap:5,marginBottom:6}}>
-          <View style={{width:9,height:9,borderRadius:5,backgroundColor:sColor(p.status)}}/>
+          <View style={{width:9,height:9,backgroundColor:sColor(p.status)}}/>
           <Text style={{fontSize:11,color:D.muted,fontWeight:'700',letterSpacing:1}}>{p.status.toUpperCase()}</Text>
         </View>
         <Text style={ss.sname} numberOfLines={2}>{p.project_name}</Text>
@@ -890,7 +889,7 @@ export default function HomeScreen(){
   if(error||!data)return(
     <View style={[ss.screen,{alignItems:'center',justifyContent:'center',gap:16}]}>
       <Text style={{color:D.red,fontSize:18}}>⚠ {error??'No data'}</Text>
-      <TouchableOpacity onPress={refresh} style={{padding:12,backgroundColor:D.card,borderRadius:8}}>
+      <TouchableOpacity onPress={refresh} style={{padding:12,backgroundColor:D.card,}}>
         <Text style={{color:D.text}}>Retry</Text>
       </TouchableOpacity>
     </View>
@@ -913,10 +912,10 @@ export default function HomeScreen(){
     <ScrollView style={{flex:1,backgroundColor:D.bg}} contentContainerStyle={{padding:16,gap:12}}>
       {data.projects.map(p=>(
         <TouchableOpacity key={p.project_id}
-          style={{backgroundColor:D.card,padding:16,borderRadius:8,borderWidth:1,borderColor:D.border}}
+          style={{backgroundColor:D.card,padding:16,borderWidth:1,borderColor:D.border}}
           onPress={()=>router.push({pathname:'/project/[id]',params:{id:p.project_id}})}>
           <View style={{flexDirection:'row',alignItems:'center',gap:6,marginBottom:6}}>
-            <View style={{width:8,height:8,borderRadius:4,backgroundColor:sColor(p.status)}}/>
+            <View style={{width:8,height:8,backgroundColor:sColor(p.status)}}/>
             <Text style={{color:D.text,fontSize:16,fontWeight:'700',flex:1}}>{p.project_name}</Text>
           </View>
           <Text style={{color:D.muted,fontSize:12,marginBottom:10}}>{p.location} · {p.client}</Text>
@@ -934,7 +933,7 @@ const ss=StyleSheet.create({
   sidebar:  {width:220,padding:14,backgroundColor:D.panel,borderRightWidth:1,borderRightColor:D.border},
   sname:    {fontSize:16,fontWeight:'800',color:D.text,lineHeight:22,marginBottom:4},
   smeta:    {fontSize:11,color:D.muted,marginBottom:2},
-  pill:     {paddingHorizontal:10,paddingVertical:4,borderRadius:6},
+  pill:     {paddingHorizontal:10,paddingVertical:4,},
   pillT:    {fontSize:13,fontWeight:'700'},
   tabbar:   {flexDirection:'row',backgroundColor:D.panel,borderBottomWidth:1,borderBottomColor:D.border,paddingHorizontal:4},
   tabbtn:   {flexDirection:'row',alignItems:'center',gap:5,paddingVertical:9,paddingHorizontal:13,borderBottomWidth:2,borderBottomColor:'transparent'},
@@ -943,23 +942,23 @@ const ss=StyleSheet.create({
   tablabA:  {color:D.accent,fontWeight:'700'},
   // Tab content
   // TV collage
-  collage:  {flex:1,flexDirection:'row',padding:8,gap:8,overflow:'hidden'},
-  cell:     {flex:1,backgroundColor:D.card,borderRadius:10,padding:10,borderWidth:1,borderColor:D.border,overflow:'hidden'},
-  colKpi:   {width:148,gap:4},
-  kpiCell:  {flex:1,backgroundColor:D.card,borderRadius:8,paddingHorizontal:10,paddingVertical:6,borderWidth:1,borderColor:D.border,justifyContent:'center'},
-  kpiV:     {fontSize:20,fontWeight:'800',color:D.text,lineHeight:24},
-  kpiL:     {fontSize:9,color:D.muted,textTransform:'uppercase',letterSpacing:0.8},
-  kpiS:     {fontSize:9,color:D.muted,marginTop:1},
+  collage:  {flex:1,flexDirection:'row',padding:6,gap:6},
+  cell:     {flex:1,backgroundColor:D.card,padding:10,borderWidth:1,borderColor:D.border,overflow:'hidden'},
+  colKpi:   {width:155,gap:3},
+  kpiCell:  {flex:1,backgroundColor:D.card,paddingHorizontal:8,paddingVertical:3,borderWidth:1,borderColor:D.border,justifyContent:'center',overflow:'hidden'},
+  kpiV:     {fontSize:20,fontWeight:'800',color:D.text,lineHeight:22},
+  kpiL:     {fontSize:10,color:D.muted,textTransform:'uppercase',letterSpacing:0.5},
+  kpiS:     {fontSize:10,color:D.muted},
   srow:     {flexDirection:'row',gap:8,flexWrap:'wrap'},
-  bstat:    {backgroundColor:D.card,borderRadius:10,paddingVertical:12,paddingHorizontal:16,alignItems:'center',minWidth:100,borderWidth:1,borderColor:D.border},
+  bstat:    {backgroundColor:D.card,paddingVertical:12,paddingHorizontal:16,alignItems:'center',minWidth:100,borderWidth:1,borderColor:D.border},
   bval:     {fontSize:32,fontWeight:'800',color:D.text},
   blab:     {fontSize:12,color:D.muted,marginTop:3,textTransform:'uppercase',letterSpacing:0.6},
   bsub:     {fontSize:11,marginTop:2},
   crow:     {flexDirection:'row',gap:24,alignItems:'flex-start',flexWrap:'wrap'},
   cb:       {alignItems:'flex-start',gap:4},
-  sl:       {fontSize:12,color:D.sub,letterSpacing:1,textTransform:'uppercase',marginBottom:6,fontWeight:'600'},
+  sl:       {fontSize:15,color:D.sub,letterSpacing:0.8,textTransform:'uppercase',marginBottom:8,fontWeight:'700'},
   legend:   {flexDirection:'row',gap:16,marginTop:6},
   legItem:  {flexDirection:'row',alignItems:'center',gap:6},
-  legDot:   {width:14,height:4,borderRadius:2},
-  legTxt:   {fontSize:13,color:D.sub},
+  legDot:   {width:14,height:4,},
+  legTxt:   {fontSize:14,color:D.sub},
 });

@@ -57,7 +57,7 @@ export default function ProjectScreen() {
   const cpiTrend = evmRows.map((e) => Number(e.cpi)).filter(Boolean);
 
   const budgetSegments = [
-    { value: spent, color: COLORS.black, label: 'Spent' },
+    { value: spent, color: COLORS.white, label: 'Spent' },
     { value: Math.max(0, total - spent), color: '#e8e8e8', label: 'Remaining' },
   ];
 
@@ -167,18 +167,18 @@ export default function ProjectScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: COLORS.black },
   content: { padding: 16, paddingBottom: 40 },
   heroCard: {
-    backgroundColor: COLORS.white, borderWidth: 1,
+    backgroundColor: COLORS.lightGray, borderWidth: 1,
     borderColor: COLORS.border, padding: 16, marginBottom: 8,
   },
   heroTop: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'flex-start', marginBottom: 4,
   },
-  heroSub: { fontSize: FONT.size.xs, color: COLORS.midGray, marginBottom: 4 },
-  heroMeta: { fontSize: FONT.size.xs, color: COLORS.midGray, marginTop: 2 },
+  heroSub: { fontSize: FONT.size.xs, color: COLORS.sub, marginBottom: 4 },
+  heroMeta: { fontSize: FONT.size.xs, color: COLORS.sub, marginTop: 2 },
   indexRow: {
     flexDirection: 'row', borderTopWidth: 1,
     borderTopColor: COLORS.border, marginTop: 8, paddingTop: 12,
@@ -186,12 +186,12 @@ const styles = StyleSheet.create({
   },
   indexChip: { flex: 1, alignItems: 'center', gap: 4 },
   sep: { width: 1, height: 52, backgroundColor: COLORS.border },
-  indexLabel: { fontSize: FONT.size.xs, color: COLORS.midGray },
+  indexLabel: { fontSize: FONT.size.xs, color: COLORS.sub },
   indexVal: { fontSize: 20, fontWeight: '700' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   metricCard: {
     width: '47.5%',
-    backgroundColor: COLORS.white, borderWidth: 1,
+    backgroundColor: COLORS.lightGray, borderWidth: 1,
     borderColor: COLORS.border, padding: 14,
   },
   metricTop: {
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginBottom: 10,
   },
   iconBox: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
-  metricValue: { fontSize: 20, fontWeight: '600', color: COLORS.black, marginBottom: 2 },
-  metricLabel: { fontSize: FONT.size.xs, fontWeight: '600', color: COLORS.darkGray },
-  metricSub: { fontSize: FONT.size.xs, color: COLORS.midGray, marginTop: 2 },
+  metricValue: { fontSize: 20, fontWeight: '600', color: COLORS.white, marginBottom: 2 },
+  metricLabel: { fontSize: FONT.size.xs, fontWeight: '600', color: COLORS.white },
+  metricSub: { fontSize: FONT.size.xs, color: COLORS.sub, marginTop: 2 },
 });

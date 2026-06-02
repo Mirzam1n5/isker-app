@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, useWindowDimensions, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Rect, Line, G, Text as ST, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useSheetData, Project, SheetData } from '../hooks/useSheetData';
@@ -898,6 +898,7 @@ export default function HomeScreen(){
   if(isTV){
     return(
       <View style={ss.screen}>
+        <Stack.Screen options={{ headerShown: false }} />
         {data.projects.slice(0,3).map((p,i)=>(
           <React.Fragment key={p.project_id}>
             <ProjectRow p={p} data={data}/>
@@ -910,6 +911,7 @@ export default function HomeScreen(){
 
   return(
     <ScrollView style={{flex:1,backgroundColor:D.bg}} contentContainerStyle={{padding:16,gap:12}}>
+      <Stack.Screen options={{ headerShown: false }} />
       {data.projects.map(p=>(
         <TouchableOpacity key={p.project_id}
           style={{backgroundColor:D.card,padding:16,borderWidth:1,borderColor:D.border}}

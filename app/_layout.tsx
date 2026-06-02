@@ -1,14 +1,24 @@
-import React from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { SheetDataContext, useSheetDataProvider } from '../hooks/useSheetData';
+import { COLORS } from '../constants';
 
 export default function RootLayout() {
-  const sheetData = useSheetDataProvider();
   return (
-    <SheetDataContext.Provider value={sheetData}>
+    <>
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false }} />
-    </SheetDataContext.Provider>
+      <Stack
+        screenOptions={{
+          headerStyle: { backgroundColor: COLORS.darkGray },
+          headerShadowVisible: false,
+          headerTitleStyle: {
+            fontWeight: '500',
+            fontSize: 16,
+            color: COLORS.white,
+          },
+          headerTintColor: COLORS.white,
+          contentStyle: { backgroundColor: COLORS.black },
+        }}
+      />
+    </>
   );
 }

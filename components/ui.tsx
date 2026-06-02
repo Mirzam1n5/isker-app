@@ -19,7 +19,7 @@ import { COLORS, FONT, STATUS_COLOR, PRIORITY_COLOR } from '../constants';
 // ─── Badge ───────────────────────────────────────────────────────
 export function Badge({ label, type = 'status' }: { label: string; type?: 'status' | 'priority' }) {
   const map = type === 'priority' ? PRIORITY_COLOR : STATUS_COLOR;
-  const colors = map[label] ?? { bg: COLORS.lightGray, text: COLORS.midGray };
+  const colors = map[label] ?? { bg: COLORS.muted, text: COLORS.midGray };
   return (
     <View style={[styles.badge, { backgroundColor: colors.bg }]}>
       <Text style={[styles.badgeText, { color: colors.text }]}>{label}</Text>
@@ -123,7 +123,7 @@ export function ChartCard({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{title ?? ''}</Text>
               <TouchableOpacity onPress={() => setOpen(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Ionicons name="close" size={22} color={COLORS.black} />
+                <Ionicons name="close" size={22} color={COLORS.white} />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
@@ -161,21 +161,24 @@ export function ChartGrid({ children }: { children: React.ReactNode }) {
     rows.push(items.slice(i, i + colCount));
   }
 
+  // Calculate card width: (50% - margin) on mobile, (25% - margin) on TV
+  const cardWidthStyle = { width: `${Math.floor(100 / colCount) - 1}%` as any };
+
   return (
-    <View style={{ width: '100%' }}>
+    <>
       {rows.map((row, i) => (
-        <View key={i} style={[styles.chartGridRow, { marginBottom: 8 }]}>
-          {row.map((child, j) => (
-            <View key={j} style={{ flex: 1, minWidth: 0 }}>
-              {child}
-            </View>
-          ))}
+        <View key={i} style={styles.chartGridRow}>
+          {React.Children.map(row as React.ReactElement[], (child, j) =>
+            child ? React.cloneElement(child as React.ReactElement<any>, {
+              style: [cardWidthStyle, (child as React.ReactElement<any>).props?.style],
+            }) : null
+          )}
           {Array.from({ length: colCount - row.length }).map((_, j) => (
-            <View key={`empty-${j}`} style={{ flex: 1 }} />
+            <View key={`empty-${j}`} style={[{ margin: 4 }, cardWidthStyle]} />
           ))}
         </View>
       ))}
-    </View>
+    </>
   );
 }
 
@@ -190,7 +193,7 @@ export function StatRow({ label, value, last }: { label: string; value: string |
 }
 
 // ─── Progress bar ─────────────────────────────────────────────────
-export function ProgressBar({ pct, color = COLORS.black }: { pct: number; color?: string }) {
+export function ProgressBar({ pct, color = COLORS.accent }: { pct: number; color?: string }) {
   return (
     <View style={styles.progressBg}>
       <View style={[styles.progressFill, { width: `${Math.min(100, Math.max(0, pct))}%`, backgroundColor: color }]} />
@@ -215,7 +218,7 @@ export function KpiBox({ label, value, note }: { label: string; value: string; n
 export function LoadingScreen() {
   return (
     <View style={styles.center}>
-      <ActivityIndicator size="large" color={COLORS.black} />
+      <ActivityIndicator size="large" color={COLORS.white} />
       <Text style={styles.loadingText}>Loading data…</Text>
     </View>
   );
@@ -300,8 +303,8 @@ export function GaugeChart({
             <SvgText key={t} x={pos.x} y={pos.y + 3} textAnchor="middle" fontSize={size * 0.07} fill={COLORS.midGray}>{t}</SvgText>
           );
         })}
-        <Path d={`M ${needleBase1.x} ${needleBase1.y} L ${needleEnd.x} ${needleEnd.y} L ${needleBase2.x} ${needleBase2.y} Z`} fill={COLORS.black} />
-        <Circle cx={cx} cy={cy} r={strokeW * 0.28} fill={COLORS.black} />
+        <Path d={`M ${needleBase1.x} ${needleBase1.y} L ${needleEnd.x} ${needleEnd.y} L ${needleBase2.x} ${needleBase2.y} Z`} fill={COLORS.white} />
+        <Circle cx={cx} cy={cy} r={strokeW * 0.28} fill={COLORS.white} />
       </Svg>
       {label !== undefined && (
         <Text style={[styles.gaugeLabel, { fontSize: size * 0.13, marginTop: -size * 0.06 }]}>{label}</Text>
@@ -342,7 +345,7 @@ export function DonutChart({
         })}
         {label !== undefined && (
           <>
-            <SvgText x={cx} y={cy - 4} textAnchor="middle" fontSize={size * 0.16} fontWeight="600" fill={COLORS.black}>{label}</SvgText>
+            <SvgText x={cx} y={cy - 4} textAnchor="middle" fontSize={size * 0.16} fontWeight="600" fill={COLORS.white}>{label}</SvgText>
             {sublabel && (
               <SvgText x={cx} y={cy + size * 0.14} textAnchor="middle" fontSize={size * 0.1} fill={COLORS.midGray}>{sublabel}</SvgText>
             )}
@@ -378,10 +381,10 @@ export function DonutWithLegend({
         return (
           <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
             <View style={{ width: 8, height: 8, backgroundColor: s.color, flexShrink: 0 }} />
-            <Text style={{ fontSize: 11, color: COLORS.darkGray, flex: 1 }} numberOfLines={1}>
+            <Text style={{ fontSize: 11, color: COLORS.white, flex: 1 }} numberOfLines={1}>
               {s.label}
             </Text>
-            <Text style={{ fontSize: 11, fontWeight: '600', color: COLORS.black }}>
+            <Text style={{ fontSize: 11, fontWeight: '600', color: COLORS.white }}>
               {s.value} · {pct}%
             </Text>
           </View>
@@ -411,7 +414,7 @@ export function DonutWithLegend({
 
 // ─── Mini line sparkline ──────────────────────────────────────────
 export function Sparkline({
-  data, color = COLORS.black, width = 120, height = 40,
+  data, color = COLORS.white, width = 120, height = 40,
 }: {
   data: number[]; color?: string; width?: number; height?: number;
 }) {
@@ -431,7 +434,7 @@ export function Sparkline({
 
   return (
     <Svg width={width} height={height}>
-      <Path d={area} fill={color} opacity={0.08} />
+      <Path d={area} fill={color} opacity={0.15} />
       <Path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" />
       <Circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r={3} fill={color} />
     </Svg>
@@ -440,7 +443,7 @@ export function Sparkline({
 
 // ─── Horizontal bar chart ─────────────────────────────────────────
 export function HBarChart({
-  data, color = COLORS.black,
+  data, color = COLORS.white,
 }: {
   data: { label: string; value: number }[];
   color?: string;
@@ -465,7 +468,7 @@ export function HBarChart({
 
 // ─── Column (vertical bar) chart ─────────────────────────────────
 export function ColumnChart({
-  data, color = COLORS.black, width = 160, height = 110, showValues = false,
+  data, color = COLORS.white, width = 160, height = 110, showValues = false,
 }: {
   data: { label: string; value: number }[];
   color?: string; width?: number; height?: number; showValues?: boolean;
@@ -473,27 +476,30 @@ export function ColumnChart({
   if (!data.length) return null;
   const max = Math.max(...data.map((d) => d.value), 1);
   const maxLabelLen = Math.max(...data.map((d) => d.label.length));
-  const labelPad = Math.min(64, Math.max(22, maxLabelLen * 4.5));
-  const padL = 4, padR = 4, padT = showValues ? 16 : 8, padB = labelPad;
+  // Enough bottom padding for rotated labels — minimum 60px
+  const labelPad = Math.min(90, Math.max(60, maxLabelLen * 5.5));
+  const padL = 8, padR = 4, padT = showValues ? 18 : 10, padB = labelPad;
   const chartW = width - padL - padR;
   const chartH = height - padT - padB;
-  const barW = Math.max(6, (chartW / data.length) * 0.6);
+  const barW = Math.max(8, (chartW / data.length) * 0.55);
   const gap = chartW / data.length;
+  // Total SVG height includes overflow from rotated labels
+  const svgH = height + 10;
 
   return (
-    <Svg width={width} height={height}>
-      <Line x1={padL} y1={padT + chartH} x2={width - padR} y2={padT + chartH} stroke="#e0e0e0" strokeWidth={1} />
+    <Svg width={width} height={svgH} viewBox={`0 0 ${width} ${svgH}`}>
+      <Line x1={padL} y1={padT + chartH} x2={width - padR} y2={padT + chartH} stroke={COLORS.border} strokeWidth={1} />
       {data.map((d, i) => {
         const barH = Math.max(2, (d.value / max) * chartH);
         const barCenterX = padL + gap * i + gap / 2;
         const x = barCenterX - barW / 2;
         const y = padT + chartH - barH;
-        const labelY = padT + chartH + 6;
+        const labelY = padT + chartH + 10;
         return (
           <G key={i}>
-            <Rect x={x} y={y} width={barW} height={barH} fill={color} rx={1} />
+            <Rect x={x} y={y} width={barW} height={barH} fill={color} rx={2} />
             {showValues && (
-              <SvgText x={barCenterX} y={y - 4} textAnchor="middle" fontSize={9} fill={COLORS.darkGray} fontWeight="500">
+              <SvgText x={barCenterX} y={y - 5} textAnchor="middle" fontSize={9} fill={COLORS.white} fontWeight="500">
                 {d.value}
               </SvgText>
             )}
@@ -503,7 +509,7 @@ export function ColumnChart({
               fontSize={9}
               fill={COLORS.midGray}
               textAnchor="end"
-              transform={`rotate(-55, ${barCenterX}, ${labelY})`}
+              transform={`rotate(-50, ${barCenterX}, ${labelY})`}
             >
               {d.label}
             </SvgText>
@@ -516,7 +522,7 @@ export function ColumnChart({
 
 // ─── Line chart ──────────────────────────────────────────────────
 export function LineChart({
-  data, color = COLORS.black, width = 160, height = 110, showDots = true, showLabels = true,
+  data, color = COLORS.white, width = 160, height = 110, showDots = true, showLabels = true,
 }: {
   data: { label: string; value: number }[];
   color?: string; width?: number; height?: number; showDots?: boolean; showLabels?: boolean;
@@ -555,7 +561,7 @@ export function LineChart({
 
 // ─── Area chart (numeric array, no labels) ────────────────────────
 export function AreaChart({
-  data, color = COLORS.black, width = 160, height = 110,
+  data, color = COLORS.white, width = 160, height = 110,
 }: {
   data: number[]; color?: string; width?: number; height?: number;
 }) {
@@ -600,7 +606,7 @@ export function StackedBarChart({
 
   return (
     <Svg width={width} height={height}>
-      <Line x1={padL} y1={padT + chartH} x2={width - padR} y2={padT + chartH} stroke="#e0e0e0" strokeWidth={1} />
+      <Line x1={padL} y1={padT + chartH} x2={width - padR} y2={padT + chartH} stroke={COLORS.border} strokeWidth={1} />
       {data.map((bar, i) => {
         const total = bar.reduce((s, v) => s + v, 0);
         const x = padL + gap * i + gap / 2 - barW / 2;
@@ -692,7 +698,7 @@ const tvTableStyles = StyleSheet.create({
     overflow: 'hidden',
   },
   mobileWrapper: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.lightGray,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
@@ -702,7 +708,7 @@ const tvTableStyles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: COLORS.border,
   },
   headerRow: {
     backgroundColor: COLORS.black,
@@ -720,15 +726,15 @@ const tvTableStyles = StyleSheet.create({
     paddingVertical: 7,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: COLORS.border,
     alignItems: 'center',
   },
   rowEven: {
-    backgroundColor: '#fafaf8',
+    backgroundColor: '#0c0d1c',
   },
   cell: {
     fontSize: 11,
-    color: COLORS.darkGray,
+    color: COLORS.white,
   },
   tvBody: {
     flexDirection: 'row',
@@ -739,7 +745,7 @@ const tvTableStyles = StyleSheet.create({
   },
   tvCell: {
     fontSize: 12,
-    color: COLORS.darkGray,
+    color: COLORS.white,
   },
 });
 
@@ -748,24 +754,25 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
   badgeText: { fontSize: FONT.size.xs, fontWeight: '600', letterSpacing: 0.3 },
   sectionTitle: {
-    fontSize: FONT.size.xs, fontWeight: '600', color: COLORS.midGray,
+    fontSize: FONT.size.xs, fontWeight: '600', color: COLORS.sub,
     letterSpacing: 0.8, marginBottom: 10, marginTop: 4,
   },
   card: {
-    backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border,
+    backgroundColor: COLORS.lightGray, borderWidth: 1, borderColor: COLORS.border,
     padding: 14, marginBottom: 8,
   },
   chartCard: {
-    flex: 1,
-    backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border,
+    // flex:1 causes overflow in ChartGrid — use percentage instead
+    backgroundColor: COLORS.lightGray, borderWidth: 1, borderColor: COLORS.border,
     padding: 10, margin: 4,
+    overflow: 'hidden',
   },
   chartCardHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     marginBottom: 6,
   },
   chartCardTitle: {
-    fontSize: 9, fontWeight: '600', color: COLORS.midGray,
+    fontSize: 9, fontWeight: '600', color: COLORS.sub,
     letterSpacing: 0.5, textTransform: 'uppercase', flex: 1,
   },
   chartGridRow: {
@@ -773,30 +780,30 @@ const styles = StyleSheet.create({
   },
   statRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  statKey: { fontSize: FONT.size.sm, color: COLORS.midGray, flex: 1 },
-  statVal: { fontSize: FONT.size.sm, fontWeight: '600', color: COLORS.black, textAlign: 'right' },
-  progressBg: { height: 5, backgroundColor: '#e8e8e8', overflow: 'hidden' },
+  statKey: { fontSize: FONT.size.sm, color: COLORS.sub, flex: 1 },
+  statVal: { fontSize: FONT.size.sm, fontWeight: '600', color: COLORS.white, textAlign: 'right' },
+  progressBg: { height: 5, backgroundColor: COLORS.muted, overflow: 'hidden' },
   progressFill: { height: 5 },
   kpiBox: {
-    flex: 1, backgroundColor: '#f8f8f6', borderWidth: 1, borderColor: COLORS.border,
+    flex: 1, backgroundColor: '#0c0d1c', borderWidth: 1, borderColor: COLORS.border,
     padding: 12, margin: 4,
   },
   kpiLabel: { fontSize: FONT.size.xs, color: COLORS.midGray, marginBottom: 4, letterSpacing: 0.3 },
-  kpiValue: { fontSize: 18, fontWeight: '600', color: COLORS.black },
+  kpiValue: { fontSize: 18, fontWeight: '600', color: COLORS.white },
   kpiNote: { fontSize: FONT.size.xs, color: '#aaa', marginTop: 2 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: COLORS.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: COLORS.darkGray },
   loadingText: { marginTop: 12, fontSize: FONT.size.md, color: COLORS.midGray },
-  errorText: { fontSize: FONT.size.lg, fontWeight: '600', color: COLORS.black, marginBottom: 6 },
+  errorText: { fontSize: FONT.size.lg, fontWeight: '600', color: COLORS.white, marginBottom: 6 },
   errorSub: { fontSize: FONT.size.sm, color: COLORS.midGray, textAlign: 'center', marginBottom: 20 },
   retryBtn: { backgroundColor: COLORS.black, paddingHorizontal: 24, paddingVertical: 10 },
   retryText: { color: COLORS.white, fontWeight: '600', fontSize: FONT.size.md },
-  gaugeLabel: { fontWeight: '700', color: COLORS.black, textAlign: 'center' },
+  gaugeLabel: { fontWeight: '700', color: COLORS.white, textAlign: 'center' },
   gaugeSub: { fontSize: FONT.size.xs, color: COLORS.midGray, marginTop: 2, textAlign: 'center' },
-  barLabel: { fontSize: FONT.size.xs, color: COLORS.midGray, flex: 1 },
-  barNum: { fontSize: FONT.size.xs, color: COLORS.black, fontWeight: '600' },
-  barTrack: { height: 6, backgroundColor: '#eee' },
+  barLabel: { fontSize: FONT.size.xs, color: COLORS.sub, flex: 1 },
+  barNum: { fontSize: FONT.size.xs, color: COLORS.white, fontWeight: '600' },
+  barTrack: { height: 6, backgroundColor: COLORS.border },
   barFill: { height: 6 },
 
   modalOverlay: {
@@ -806,7 +813,7 @@ const styles = StyleSheet.create({
   },
 
   modalCard: {
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.lightGray,
     padding: 18,
     paddingBottom: 32,
     borderTopLeftRadius: 16,
@@ -825,7 +832,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: FONT.size.md,
     fontWeight: '600',
-    color: COLORS.black,
+    color: COLORS.white,
   },
 
   // ── TV overrides ──────────────────────────────────────────────
@@ -835,7 +842,7 @@ const styles = StyleSheet.create({
   chartCardTitleTV: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.midGray,
+    color: COLORS.sub,
     letterSpacing: 0.5,
     marginBottom: 10,
     textTransform: 'uppercase' as const,

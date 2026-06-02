@@ -12,29 +12,43 @@ export const SHEET_NAMES = {
   DAILY_REPORTS: 'Daily Reports',
 } as const;
 
-// ─── Colors ──────────────────────────────────────────────────────
+// ─── Dark theme palette (matches web TV version) ─────────────────
 export const COLORS = {
-  black:       '#111111',
-  darkGray:    '#333333',
-  midGray:     '#888888',
-  lightGray:   '#f5f5f3',
-  border:      '#e0e0e0',
-  white:       '#ffffff',
-  background:  '#f5f5f3',
+  // Backgrounds
+  black:       '#07080f',   // page background
+  darkGray:    '#0d0e1a',   // panel / topbar
+  midGray:     '#8888aa',   // secondary text
+  lightGray:   '#13141f',   // card background
+  border:      '#22233a',   // borders
+  white:       '#eeeef8',   // primary text
+  background:  '#07080f',   // screen background
 
-  green:       '#1D9E75',
-  greenLight:  '#e1f5ee',
-  greenDark:   '#0f6e56',
+  // Accent
+  green:       '#00e676',
+  greenLight:  '#0a2618',
+  greenDark:   '#00c853',
 
-  red:         '#e53935',
-  redLight:    '#fce8e8',
-  redDark:     '#8b1f1f',
+  red:         '#ff4444',
+  redLight:    '#280a0a',
+  redDark:     '#ff6666',
 
-  blue:        '#1a4b8a',
-  blueLight:   '#e4edf9',
+  blue:        '#4fc3f7',
+  blueLight:   '#072030',
 
-  yellow:      '#7a4500',
-  yellowLight: '#fff3e0',
+  yellow:      '#ffd740',
+  yellowLight: '#2a2000',
+
+  accent:      '#7c6af7',
+  accentDim:   '#1a1640',
+
+  orange:      '#ff9100',
+  orangeLight: '#271500',
+
+  // Aliases for ui.tsx compatibility
+  muted:       '#44445a',
+  sub:         '#8888aa',
+  panel:       '#0d0e1a',
+  card:        '#13141f',
 } as const;
 
 // ─── Typography ──────────────────────────────────────────────────
@@ -52,19 +66,19 @@ export const FONT = {
 
 // ─── Status helpers ──────────────────────────────────────────────
 export const STATUS_COLOR: Record<string, { bg: string; text: string }> = {
-  'On Track':    { bg: COLORS.greenLight,  text: COLORS.greenDark },
-  'Active':      { bg: COLORS.blueLight,   text: COLORS.blue },
-  'Delayed':     { bg: COLORS.redLight,    text: COLORS.redDark },
-  'Done':        { bg: COLORS.greenLight,  text: COLORS.greenDark },
-  'In Progress': { bg: COLORS.blueLight,   text: COLORS.blue },
-  'Not Started': { bg: COLORS.lightGray,   text: COLORS.midGray },
-  'Maintenance': { bg: COLORS.yellowLight, text: COLORS.yellow },
-  'Open':        { bg: COLORS.redLight,    text: COLORS.redDark },
-  'Resolved':    { bg: COLORS.greenLight,  text: COLORS.greenDark },
+  'On Track':    { bg: '#0a2618', text: '#00e676' },
+  'Active':      { bg: '#072030', text: '#4fc3f7' },
+  'Delayed':     { bg: '#280a0a', text: '#ff4444' },
+  'Done':        { bg: '#0a2618', text: '#00e676' },
+  'In Progress': { bg: '#072030', text: '#4fc3f7' },
+  'Not Started': { bg: '#1a1b2e', text: '#8888aa' },
+  'Maintenance': { bg: '#2a2000', text: '#ffd740' },
+  'Open':        { bg: '#280a0a', text: '#ff4444' },
+  'Resolved':    { bg: '#0a2618', text: '#00e676' },
 };
 
 export const PRIORITY_COLOR: Record<string, { bg: string; text: string }> = {
-  'High':   { bg: COLORS.redLight,    text: COLORS.redDark },
-  'Medium': { bg: COLORS.yellowLight, text: COLORS.yellow },
-  'Low':    { bg: COLORS.greenLight,  text: COLORS.greenDark },
+  'High':   { bg: '#280a0a', text: '#ff4444' },
+  'Medium': { bg: '#2a2000', text: '#ffd740' },
+  'Low':    { bg: '#0a2618', text: '#00e676' },
 };

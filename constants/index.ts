@@ -15,40 +15,40 @@ export const SHEET_NAMES = {
 // ─── Dark theme palette (matches web TV version) ─────────────────
 export const COLORS = {
   // Backgrounds
-  black:       '#07080f',   // page background
-  darkGray:    '#0d0e1a',   // panel / topbar
-  midGray:     '#8888aa',   // secondary text
-  lightGray:   '#13141f',   // card background
-  border:      '#22233a',   // borders
-  white:       '#eeeef8',   // primary text
-  background:  '#07080f',   // screen background
+  black:       '#0c0d14',   // page background
+  darkGray:    '#111220',   // panel / topbar
+  midGray:     '#7878a0',   // secondary text
+  lightGray:   '#161724',   // card background
+  border:      '#20223a',   // borders
+  white:       '#dfe0ef',   // primary text
+  background:  '#0c0d14',   // screen background
 
   // Accent
-  green:       '#00e676',
-  greenLight:  '#0a2618',
-  greenDark:   '#00c853',
+  green:       '#4caf7d',
+  greenLight:  '#0d2118',
+  greenDark:   '#3d9e6a',
 
-  red:         '#ff4444',
-  redLight:    '#280a0a',
-  redDark:     '#ff6666',
+  red:         '#e05c5c',
+  redLight:    '#200e0e',
+  redDark:     '#e07070',
 
-  blue:        '#4fc3f7',
-  blueLight:   '#072030',
+  blue:        '#5b9bd5',
+  blueLight:   '#0a1a2e',
 
-  yellow:      '#ffd740',
-  yellowLight: '#2a2000',
+  yellow:      '#d4a843',
+  yellowLight: '#211a08',
 
-  accent:      '#7c6af7',
-  accentDim:   '#1a1640',
+  accent:      '#7c78c8',
+  accentDim:   '#151430',
 
-  orange:      '#ff9100',
-  orangeLight: '#271500',
+  orange:      '#d4845a',
+  orangeLight: '#1e1008',
 
   // Aliases for ui.tsx compatibility
-  muted:       '#44445a',
-  sub:         '#8888aa',
-  panel:       '#0d0e1a',
-  card:        '#13141f',
+  muted:       '#404058',
+  sub:         '#7878a0',
+  panel:       '#111220',
+  card:        '#161724',
 } as const;
 
 // ─── Typography ──────────────────────────────────────────────────
@@ -66,19 +66,19 @@ export const FONT = {
 
 // ─── Status helpers ──────────────────────────────────────────────
 export const STATUS_COLOR: Record<string, { bg: string; text: string }> = {
-  'On Track':    { bg: '#0a2618', text: '#00e676' },
-  'Active':      { bg: '#072030', text: '#4fc3f7' },
-  'Delayed':     { bg: '#280a0a', text: '#ff4444' },
-  'Done':        { bg: '#0a2618', text: '#00e676' },
-  'In Progress': { bg: '#072030', text: '#4fc3f7' },
-  'Not Started': { bg: '#1a1b2e', text: '#8888aa' },
-  'Maintenance': { bg: '#2a2000', text: '#ffd740' },
-  'Open':        { bg: '#280a0a', text: '#ff4444' },
-  'Resolved':    { bg: '#0a2618', text: '#00e676' },
+  'On Track':    { bg: '#0d2118', text: '#4caf7d' },
+  'Active':      { bg: '#0a1a2e', text: '#5b9bd5' },
+  'Delayed':     { bg: '#200e0e', text: '#e05c5c' },
+  'Done':        { bg: '#0d2118', text: '#4caf7d' },
+  'In Progress': { bg: '#0a1a2e', text: '#5b9bd5' },
+  'Not Started': { bg: '#1a1b2e', text: '#7878a0' },
+  'Maintenance': { bg: '#211a08', text: '#d4a843' },
+  'Open':        { bg: '#200e0e', text: '#e05c5c' },
+  'Resolved':    { bg: '#0d2118', text: '#4caf7d' },
 };
 
 export const PRIORITY_COLOR: Record<string, { bg: string; text: string }> = {
-  'High':   { bg: '#280a0a', text: '#ff4444' },
-  'Medium': { bg: '#2a2000', text: '#ffd740' },
-  'Low':    { bg: '#0a2618', text: '#00e676' },
+  'High':   { bg: '#200e0e', text: '#e05c5c' },
+  'Medium': { bg: '#211a08', text: '#d4a843' },
+  'Low':    { bg: '#0d2118', text: '#4caf7d' },
 };

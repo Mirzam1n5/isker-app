@@ -253,15 +253,15 @@ function CamFeed({name,w,h,camIndex}:{name:string;w:number;h:number;camIndex:num
   // Camera sources per project index
   const CAM_SRCS: Record<number, {src:string;title:string}> = {
     0: {
-      src: 'https://camstreamer.com/embed/Jk8ZAenEHp16Tu0nqNUbuESPwr6HKmFqOcEisSYH?rel=0',
+      src: 'https://www.youtube.com/embed/dmEq_ddk0kw?autoplay=1&mute=1&controls=0&rel=0&loop=1&playlist=dmEq_ddk0kw',
       title: 'Site Camera 1',
     },
     1: {
-      src: 'https://camstreamer.com/embed/l85zj34Vvs9BT5P2sOGJfVGsrswlzWseyrnmOrrl?rel=0',
+      src: 'https://www.youtube.com/embed/f_0KKz6pY_8?autoplay=1&mute=1&controls=0&rel=0&loop=1&playlist=f_0KKz6pY_8',
       title: 'Site Camera 2',
     },
     2: {
-      src: 'https://camstreamer.com/embed/Ti2l4rKD7KE1vP6Utj6ffCHDzAWUtbD8CMIQDdK4?rel=0',
+      src: 'https://www.youtube.com/embed/t-NAp1XIDIc?autoplay=1&mute=1&controls=0&rel=0&loop=1&playlist=t-NAp1XIDIc',
       title: 'Site Camera 3',
     },
   };
@@ -296,8 +296,10 @@ function CamFeed({name,w,h,camIndex}:{name:string;w:number;h:number;camIndex:num
         src={cam.src}
         title={cam.title}
         style={{width:'100%',height:'100%',border:'none',display:'block'}}
-        allow="autoplay; fullscreen; picture-in-picture"
+        allow="autoplay; fullscreen; picture-in-picture; accelerometer; clipboard-write; encrypted-media; gyroscope; web-share"
         allowFullScreen
+        referrerPolicy="strict-origin-when-cross-origin"
+        loading="eager"
       />
       {/* Corner brackets */}
       {([{top:8,left:8},{top:8,right:8},{bottom:8,left:8},{bottom:8,right:8}] as any[]).map((pos,i)=>(

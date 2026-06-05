@@ -428,18 +428,37 @@ function RightDash({p,data,w,h,fs=14}:{p:Project;data:SheetData;w:number;h:numbe
         </View>
       </View>
 
-      {/* ROW 2: Equipment by type — full width column chart */}
+      {/* ROW 2: Equipment by type — donut + legend */}
       {types.length>0&&(
-        <View style={{height:row2H,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:10}}>
-          <SL label="EQUIPMENT BY TYPE" color={D.blue}/>
-          <ColChart
-            data={types.map(([l,v])=>({label:l,value:v}))}
-            colors={[D.blue,D.accent,D.green,D.orange,D.yellow,'#e91e63']}
-            w={innerW-20}
-            h={row2H-28}
-            showVals
-            labelSize={12}
-          />
+        <View style={{height:row2H,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:10,flexDirection:'row',gap:10}}>
+          <View style={{alignItems:'center',justifyContent:'center'}}>
+            <Donut
+              slices={types.map(([l,v],i)=>({value:v,color:[D.blue,D.accent,D.green,D.orange,D.yellow,'#e91e63'][i%6]}))}
+              size={Math.min(row2H-24, innerW*0.38)}
+              label={String(eq.length)}
+            />
+          </View>
+          <View style={{flex:1,justifyContent:'center',gap:Math.max(4,fs*0.35)}}>
+            <SL label="EQUIPMENT BY TYPE" color={D.blue}/>
+            {types.map(([l,v],i)=>{
+              const col=[D.blue,D.accent,D.green,D.orange,D.yellow,'#e91e63'][i%6];
+              const pct=eq.length>0?Math.round((v/eq.length)*100):0;
+              return(
+                <View key={l} style={{gap:2}}>
+                  <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:6}}>
+                    <View style={{flexDirection:'row',alignItems:'center',gap:5,flex:1}}>
+                      <View style={{width:8,height:8,backgroundColor:col,borderRadius:1}}/>
+                      <Text style={{fontSize:fs*0.85,color:D.text,fontWeight:'600'}} numberOfLines={1}>{l}</Text>
+                    </View>
+                    <Text style={{fontSize:fs*0.85,color:col,fontWeight:'900',minWidth:20,textAlign:'right'}}>{v}</Text>
+                  </View>
+                  <View style={{height:3,backgroundColor:D.border}}>
+                    <View style={{height:3,width:`${pct}%` as any,backgroundColor:col,opacity:0.8}}/>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         </View>
       )}
 

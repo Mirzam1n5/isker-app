@@ -186,19 +186,20 @@ function ColChart({data,colors,w,h=100,showVals=true,labelSize=11}:{
 }
 
 // ── HBars ────────────────────────────────────────────────────────
-function HBars({data,color,w,compact=false}:{data:{label:string;value:number}[];color:string;w:number;compact?:boolean}){
+function HBars({data,color,compact=false}:{data:{label:string;value:number}[];color:string;w?:number;compact?:boolean}){
   const max=Math.max(...data.map(d=>d.value),1);
-  const fs=compact?12:13;
+  const fs=compact?11:13;
+  const bh=compact?5:6;
   return(
-    <View style={{gap:compact?4:6}}>
+    <View style={{gap:compact?3:6,flex:1,justifyContent:'space-evenly'}}>
       {data.map((d,i)=>(
         <View key={i} style={{gap:2}}>
-          <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-            <Text style={{fontSize:fs,color:D.text}} numberOfLines={1}>{d.label}</Text>
-            <Text style={{fontSize:fs,color:color,fontWeight:'800'}}>{d.value}</Text>
+          <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
+            <Text style={{fontSize:fs,color:D.text,flex:1}} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{d.label}</Text>
+            <Text style={{fontSize:fs,color:color,fontWeight:'800',marginLeft:4}}>{d.value}</Text>
           </View>
-          <View style={{height:compact?5:6,backgroundColor:D.border,width:w}}>
-            <View style={{height:compact?5:6,width:Math.max(4,(d.value/max)*w) as any,backgroundColor:color}}/>
+          <View style={{height:bh,backgroundColor:D.border}}>
+            <View style={{height:bh,width:`${Math.round((d.value/max)*100)}%` as any,backgroundColor:color}}/>
           </View>
         </View>
       ))}
@@ -311,178 +312,145 @@ function CamFeed({name,w,h,camIndex}:{name:string;w:number;h:number;camIndex:num
     </View>
   );
 }
-// ── LEFT column dashboard ───────────────────────────────────────
-function LeftDash({p,data,w,h,fs=14}:{p:Project;data:SheetData;w:number;h:number;fs?:number}){
+// ── LEFT column dashboard ──────────────────────────────────────
+function LeftDash({p,data}:{p:Project;data:SheetData}){
   const prog=Number(p.progress_pct),cpi=Number(p.cpi),spi=Number(p.spi);
   const spent=Number(p.spent_to_date_usd),total=Number(p.total_budget_usd);
   const bPct=total>0?(spent/total)*100:0;
-
   const workers=data.workers.filter(wr=>wr.project_id===p.project_id);
   const active=workers.filter(wr=>wr.status==='Active').length;
   const byDept:Record<string,number>={};
   workers.forEach(wr=>{byDept[wr.department]=(byDept[wr.department]??0)+1;});
-  const depts=Object.entries(byDept).sort((a,b)=>b[1]-a[1]).slice(0,4);
-
+  const depts=Object.entries(byDept).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const evm=data.evm.filter(e=>e.project_id===p.project_id);
   const cpiTrend=evm.map(e=>Number(e.cpi)).filter(Boolean);
   const spiTrend=evm.map(e=>Number(e.spi)).filter(Boolean);
-
   const issues=data.issues.filter(i=>i.project_id===p.project_id);
   const openH=issues.filter(i=>i.status==='Open'&&i.priority==='High').length;
   const openM=issues.filter(i=>i.status==='Open'&&i.priority==='Medium').length;
 
-  const gap=6;
-  const innerW=w-20;
-  const gaugeSize=Math.min(innerW*0.88, h*0.34);
-
   return(
-    <View style={{width:w,height:h,padding:10,gap:gap,overflow:'hidden'}}>
-      {/* Project name */}
+    <View style={{flex:1,padding:10,gap:6,overflow:'hidden'}}>
+      {/* Header */}
       <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
         <View style={{width:8,height:8,borderRadius:4,backgroundColor:sCol(p.status)}}/>
         <Text style={{fontSize:10,color:sCol(p.status),fontWeight:'700',letterSpacing:1.5}}>{p.status.toUpperCase()}</Text>
-        <Text style={{flex:1,fontSize:fs*1.1,fontWeight:'800',color:D.text}} numberOfLines={1}>{p.project_name}</Text>
+        <Text style={{flex:1,fontSize:14,fontWeight:'800',color:D.text}} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{p.project_name}</Text>
       </View>
 
-      {/* Big gauge + key metrics */}
-      <View style={{flexDirection:'row',alignItems:'flex-start',gap:gap}}>
-        <View style={{alignItems:'center'}}>
-          <ArcGauge pct={prog} color={D.blue} size={gaugeSize} label={fmtP(prog)} sublabel="vs plan" plan={Math.max(prog-5,0)}/>
-          <Text style={{fontSize:9,color:D.muted,marginTop:-4}}>OVERALL PROGRESS</Text>
+      {/* Gauge + CPI/SPI */}
+      <View style={{flex:2,flexDirection:'row',gap:6,minHeight:0}}>
+        <View style={{flex:1,alignItems:'center',justifyContent:'center'}}>
+          <ArcGauge pct={prog} color={D.blue} size={100} label={fmtP(prog)} sublabel="vs plan" plan={Math.max(prog-5,0)}/>
+          <Text style={{fontSize:9,color:D.muted,marginTop:-2}}>PROGRESS</Text>
         </View>
-        <View style={{flex:1,gap:5}}>
-          <View style={{flexDirection:'row',gap:5}}>
-            <View style={{flex:1,backgroundColor:cpi>=1?D.greenDim:D.redDim,padding:7,alignItems:'center'}}>
-              <Text style={{fontSize:fs*0.85,fontWeight:'800',color:iCol(cpi)}}>CPI</Text>
-              <Text style={{fontSize:fs*1.8,fontWeight:'900',color:iCol(cpi)}}>{cpi}</Text>
-            </View>
-            <View style={{flex:1,backgroundColor:spi>=1?D.greenDim:D.redDim,padding:7,alignItems:'center'}}>
-              <Text style={{fontSize:fs*0.85,fontWeight:'800',color:iCol(spi)}}>SPI</Text>
-              <Text style={{fontSize:fs*1.8,fontWeight:'900',color:iCol(spi)}}>{spi}</Text>
-            </View>
-          </View>
-          {/* CPI/SPI trend */}
-          {cpiTrend.length>1&&(
-            <View style={{backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:5,gap:3}}>
-              <Text style={{fontSize:8,color:D.sub,letterSpacing:0.8}}>3-MONTH TREND</Text>
-              <View style={{flexDirection:'row',gap:4,alignItems:'center'}}>
-                <Spark data={cpiTrend.slice(-4)} color={iCol(cpi)} w={(innerW-gaugeSize-gap-10)*0.5} h={28}/>
-                <Spark data={spiTrend.slice(-4)} color={iCol(spi)} w={(innerW-gaugeSize-gap-10)*0.5} h={28}/>
+        <View style={{flex:1,gap:4}}>
+          <View style={{flex:1,flexDirection:'row',gap:4}}>
+            {[{l:'CPI',v:cpi,c:iCol(cpi),dim:cpi>=1?D.greenDim:D.redDim},{l:'SPI',v:spi,c:iCol(spi),dim:spi>=1?D.greenDim:D.redDim}].map(({l,v,c,dim})=>(
+              <View key={l} style={{flex:1,backgroundColor:dim,padding:6,alignItems:'center',justifyContent:'center'}}>
+                <Text style={{fontSize:10,fontWeight:'800',color:c}}>{l}</Text>
+                <Text style={{fontSize:22,fontWeight:'900',color:c,lineHeight:26}} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.5}>{v}</Text>
               </View>
-              <View style={{flexDirection:'row',justifyContent:'space-around'}}>
-                <Text style={{fontSize:8,color:iCol(cpi)}}>CPI</Text>
-                <Text style={{fontSize:8,color:iCol(spi)}}>SPI</Text>
+            ))}
+          </View>
+          {cpiTrend.length>1&&(
+            <View style={{flex:1,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:5,gap:2}}>
+              <Text style={{fontSize:8,color:D.sub,letterSpacing:0.8}}>TREND</Text>
+              <View style={{flex:1,flexDirection:'row',gap:4,alignItems:'center'}}>
+                <View style={{flex:1}}><Spark data={cpiTrend.slice(-4)} color={iCol(cpi)} w={60} h={24}/></View>
+                <View style={{flex:1}}><Spark data={spiTrend.slice(-4)} color={iCol(spi)} w={60} h={24}/></View>
               </View>
             </View>
           )}
         </View>
       </View>
 
-      {/* Issues */}
-      <View style={{flexDirection:'row',gap:gap}}>
-        <MBox label="Open High" value={String(openH)} color={openH>0?D.red:D.green}/>
-        <MBox label="Open Med." value={String(openM)} color={openM>0?D.orange:D.green}/>
-        <MBox label="Workers" value={String(active)} color={D.green} sub={`of ${workers.length}`}/>
+      {/* 4 metric boxes */}
+      <View style={{flexDirection:'row',gap:4}}>
+        <MBox label="H.Issues" value={String(openH)} color={openH>0?D.red:D.green}/>
+        <MBox label="M.Issues" value={String(openM)} color={openM>0?D.orange:D.green}/>
+        <MBox label="Workers" value={String(active)} color={D.green} sub={`/${workers.length}`}/>
         <MBox label="Budget" value={fmtP(bPct)} color={bPct>90?D.red:bPct>75?D.orange:D.blue}/>
       </View>
 
-      {/* Workforce by dept */}
+      {/* Workforce bars */}
       {depts.length>0&&(
-        <View style={{backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:8,gap:5,flex:1}}>
+        <View style={{flex:1,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:6,gap:3,minHeight:0}}>
           <SL label="WORKFORCE BY DEPT" color={D.green}/>
-          <HBars data={depts.map(([l,v])=>({label:l,value:v}))} color={D.green} w={innerW-16} compact/>
+          <View style={{flex:1,minHeight:0}}>
+            <HBars data={depts.map(([l,v])=>({label:l,value:v}))} color={D.green} compact/>
+          </View>
         </View>
       )}
     </View>
   );
 }
 
-// ── RIGHT column dashboard ──────────────────────────────────────
-function RightDash({p,data,w,h,fs=14}:{p:Project;data:SheetData;w:number;h:number;fs?:number}){
+// ── RIGHT column dashboard ──────────────────────────────────
+function RightDash({p,data}:{p:Project;data:SheetData}){
   const spent=Number(p.spent_to_date_usd),total=Number(p.total_budget_usd);
   const bPct=total>0?(spent/total)*100:0;
-
   const eq=data.equipment.filter(e=>e.project_id===p.project_id);
   const eqActive=eq.filter(e=>e.status==='Active').length;
   const eqMaint=eq.filter(e=>e.status==='Maintenance').length;
   const byType:Record<string,number>={};
   eq.forEach(e=>{byType[e.type]=(byType[e.type]??0)+1;});
-  const types=Object.entries(byType).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const types=Object.entries(byType).sort((a,b)=>b[1]-a[1]).slice(0,5);
   const dailyCost=eq.filter(e=>e.status==='Active').reduce((s,e)=>s+Number(e.daily_cost_usd),0);
   const utilPct=eq.length>0?Math.round((eqActive/eq.length)*100):0;
-
-  const pad=12;
-  const innerW=w-pad*2;
-  const gap=8;
-
-  // Row proportions: gauge row | col chart | budget row
-  const row1H=Math.floor(h*0.30);
-  const row2H=Math.floor(h*0.42);
-  const row3H=h-row1H-row2H-gap*2-pad*2;
-
-  const gaugeSize=Math.min(row1H*1.1, innerW*0.45);
+  const bColor=bPct>90?D.red:bPct>75?D.orange:D.blue;
 
   return(
-    <View style={{width:w,height:h,padding:pad,gap:gap,overflow:'hidden'}}>
+    <View style={{flex:1,padding:10,gap:6,overflow:'hidden'}}>
 
-      {/* ROW 1: Utilization gauge + Active/Maint/Cost big boxes */}
-      <View style={{height:row1H,flexDirection:'row',gap:gap,alignItems:'stretch'}}>
-        <View style={{alignItems:'center',justifyContent:'center',backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:8}}>
-          <ArcGauge
-            pct={utilPct}
-            color={utilPct>70?D.blue:D.orange}
-            size={gaugeSize}
-            label={`${utilPct}%`}
-            sublabel="utilization"
-          />
+      {/* ROW 1: Gauge + stat boxes */}
+      <View style={{flex:2.2,flexDirection:'row',gap:6,minHeight:0}}>
+        <View style={{alignItems:'center',justifyContent:'center',backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:6}}>
+          <ArcGauge pct={utilPct} color={utilPct>70?D.blue:D.orange} size={90} label={`${utilPct}%`} sublabel="utilization"/>
         </View>
-        <View style={{flex:1,gap:gap}}>
-          <View style={{flex:1,flexDirection:'row',gap:gap}}>
-            <View style={{flex:1,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:10,alignItems:'center',justifyContent:'center'}}>
-              <Text style={{fontSize:fs*0.7,color:D.muted,letterSpacing:1,marginBottom:2}}>ACTIVE</Text>
-              <Text style={{fontSize:fs*2,fontWeight:'900',color:D.blue,lineHeight:fs*2.2}}>{eqActive}</Text>
+        <View style={{flex:1,gap:4}}>
+          <View style={{flex:1,flexDirection:'row',gap:4}}>
+            <View style={{flex:1,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:6,alignItems:'center',justifyContent:'center'}}>
+              <Text style={{fontSize:9,color:D.muted,letterSpacing:1}}>ACTIVE</Text>
+              <Text style={{fontSize:22,fontWeight:'900',color:D.blue}} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.5}>{eqActive}</Text>
             </View>
-            <View style={{flex:1,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:10,alignItems:'center',justifyContent:'center'}}>
-              <Text style={{fontSize:fs*0.7,color:D.muted,letterSpacing:1,marginBottom:2}}>MAINT.</Text>
-              <Text style={{fontSize:fs*2,fontWeight:'900',color:D.orange,lineHeight:fs*2.2}}>{eqMaint}</Text>
+            <View style={{flex:1,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:6,alignItems:'center',justifyContent:'center'}}>
+              <Text style={{fontSize:9,color:D.muted,letterSpacing:1}}>MAINT.</Text>
+              <Text style={{fontSize:22,fontWeight:'900',color:D.orange}} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.5}>{eqMaint}</Text>
             </View>
           </View>
-          <View style={{flex:1,flexDirection:'row',gap:gap}}>
-            <View style={{flex:2,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:10,justifyContent:'center'}}>
-              <Text style={{fontSize:fs*0.7,color:D.muted,letterSpacing:1,marginBottom:2}}>DAILY COST</Text>
-              <Text style={{fontSize:fs*1.6,fontWeight:'900',color:D.yellow}}>{fmt$M(dailyCost)}</Text>
+          <View style={{flex:1,flexDirection:'row',gap:4}}>
+            <View style={{flex:2,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:6,justifyContent:'center'}}>
+              <Text style={{fontSize:9,color:D.muted,letterSpacing:1}}>DAILY COST</Text>
+              <Text style={{fontSize:16,fontWeight:'900',color:D.yellow}} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.4}>{fmt$M(dailyCost)}</Text>
             </View>
-            <View style={{flex:1,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:10,alignItems:'center',justifyContent:'center'}}>
-              <Text style={{fontSize:fs*0.7,color:D.muted,letterSpacing:1,marginBottom:2}}>TOTAL</Text>
-              <Text style={{fontSize:fs*1.6,fontWeight:'900',color:D.sub}}>{eq.length}</Text>
+            <View style={{flex:1,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:6,alignItems:'center',justifyContent:'center'}}>
+              <Text style={{fontSize:9,color:D.muted,letterSpacing:1}}>TOTAL</Text>
+              <Text style={{fontSize:16,fontWeight:'900',color:D.sub}} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.5}>{eq.length}</Text>
             </View>
           </View>
         </View>
       </View>
 
-      {/* ROW 2: Equipment by type — donut + legend */}
+      {/* ROW 2: Equipment by type */}
       {types.length>0&&(
-        <View style={{height:row2H,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:10,flexDirection:'row',gap:10}}>
+        <View style={{flex:2.5,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:8,flexDirection:'row',gap:8,minHeight:0,overflow:'hidden'}}>
           <View style={{alignItems:'center',justifyContent:'center'}}>
-            <Donut
-              slices={types.map(([l,v],i)=>({value:v,color:[D.blue,D.accent,D.green,D.orange,D.yellow,'#e91e63'][i%6]}))}
-              size={Math.min(row2H-24, innerW*0.38)}
-              label={String(eq.length)}
-            />
+            <Donut slices={types.map(([l,v],i)=>({value:v,color:[D.blue,D.accent,D.green,D.orange,D.yellow,'#e91e63'][i%6]}))} size={80} label={String(eq.length)}/>
           </View>
-          <View style={{flex:1,justifyContent:'center',gap:Math.max(4,fs*0.35)}}>
-            <SL label="EQUIPMENT BY TYPE" color={D.blue}/>
+          <View style={{flex:1,gap:4,overflow:'hidden'}}>
+            <SL label="BY TYPE" color={D.blue}/>
             {types.map(([l,v],i)=>{
               const col=[D.blue,D.accent,D.green,D.orange,D.yellow,'#e91e63'][i%6];
               const pct=eq.length>0?Math.round((v/eq.length)*100):0;
               return(
                 <View key={l} style={{gap:2}}>
-                  <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:6}}>
-                    <View style={{flexDirection:'row',alignItems:'center',gap:5,flex:1}}>
-                      <View style={{width:8,height:8,backgroundColor:col,borderRadius:1}}/>
-                      <Text style={{fontSize:fs*0.85,color:D.text,fontWeight:'600'}} numberOfLines={1}>{l}</Text>
+                  <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:4}}>
+                    <View style={{flexDirection:'row',alignItems:'center',gap:4,flex:1}}>
+                      <View style={{width:7,height:7,backgroundColor:col}}/>
+                      <Text style={{fontSize:11,color:D.text,fontWeight:'600',flex:1}} numberOfLines={1}>{l}</Text>
                     </View>
-                    <Text style={{fontSize:fs*0.85,color:col,fontWeight:'900',minWidth:20,textAlign:'right'}}>{v}</Text>
+                    <Text style={{fontSize:11,color:col,fontWeight:'900'}}>{v}</Text>
                   </View>
                   <View style={{height:3,backgroundColor:D.border}}>
                     <View style={{height:3,width:`${pct}%` as any,backgroundColor:col,opacity:0.8}}/>
@@ -494,17 +462,17 @@ function RightDash({p,data,w,h,fs=14}:{p:Project;data:SheetData;w:number;h:numbe
         </View>
       )}
 
-      {/* ROW 3: Budget — горизонтально, 3 ячейки в ряд */}
-      <View style={{height:row3H,flexDirection:'row',gap:gap}}>
+      {/* ROW 3: Budget boxes */}
+      <View style={{flex:1.3,flexDirection:'row',gap:6,minHeight:0}}>
         {[
-          {label:'BUDGET USED', value:`${Math.round(bPct)}%`, color:bPct>90?D.red:bPct>75?D.orange:D.blue},
-          {label:'SPENT',       value:fmt$M(spent),           color:D.text,  sub:fmt$M(total)},
+          {label:'BUDGET USED', value:`${Math.round(bPct)}%`,    color:bColor},
+          {label:'SPENT',       value:fmt$M(spent),              color:D.text, sub:'of '+fmt$M(total)},
           {label:'REMAINING',   value:fmt$M(Math.max(0,total-spent)), color:bPct>90?D.red:D.green},
         ].map(({label,value,color,sub})=>(
-          <View key={label} style={{flex:1,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:8,justifyContent:'center',alignItems:'center',overflow:'hidden'}}>
-            <Text style={{fontSize:fs*0.65,color:D.muted,letterSpacing:0.8,marginBottom:2,textAlign:'center'}}>{label}</Text>
-            <Text style={{fontSize:Math.min(fs*1.4, row3H*0.45),fontWeight:'900',color,textAlign:'center'}} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-            {sub&&<Text style={{fontSize:fs*0.65,color:D.muted,marginTop:1}}>{sub}</Text>}
+          <View key={label} style={{flex:1,backgroundColor:D.card,borderWidth:1,borderColor:D.border,padding:6,justifyContent:'center',alignItems:'center',overflow:'hidden'}}>
+            <Text style={{fontSize:9,color:D.muted,letterSpacing:0.8,marginBottom:2,textAlign:'center'}}>{label}</Text>
+            <Text style={{fontSize:18,fontWeight:'900',color,textAlign:'center'}} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.3}>{value}</Text>
+            {sub&&<Text style={{fontSize:9,color:D.muted,marginTop:1,textAlign:'center'}} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>{sub}</Text>}
           </View>
         ))}
       </View>
@@ -513,22 +481,23 @@ function RightDash({p,data,w,h,fs=14}:{p:Project;data:SheetData;w:number;h:numbe
   );
 }
 
-// ── Project row ─────────────────────────────────────────────────
-function ProjectRow({p,data,rowH,totalW,camIndex}:{p:Project;data:SheetData;rowH:number;totalW:number;camIndex:number}){
-  const sideW=Math.floor(totalW*0.33);
-  const midW=totalW-sideW*2-2;
-  // fs: conservative — min of width-based and height-based, hard cap 16
-  const fs=Math.max(9, Math.min(Math.floor(sideW/24), Math.floor(rowH/20), 16));
+// ── Project row ───────────────────────────────────────────
+function ProjectRow({p,data,camIndex}:{p:Project;data:SheetData;camIndex:number}){
+  const {width,height}=useWindowDimensions();
+  const n=3;
+  const rowH=Math.floor(height/n);
+  const sideW=Math.floor(width*0.22);
+  const midW=width-sideW*2-2;
   return(
-    <View style={{flexDirection:'row',height:rowH,overflow:'hidden'}}>
+    <View style={{height:rowH,flexDirection:'row',overflow:'hidden'}}>
       <View style={{width:sideW,borderRightWidth:1,borderRightColor:D.border}}>
-        <LeftDash p={p} data={data} w={sideW} h={rowH} fs={fs}/>
+        <LeftDash p={p} data={data}/>
       </View>
       <View style={{width:midW}}>
         <CamFeed name={p.project_name} w={midW} h={rowH} camIndex={camIndex}/>
       </View>
       <View style={{width:sideW,borderLeftWidth:1,borderLeftColor:D.border}}>
-        <RightDash p={p} data={data} w={sideW} h={rowH} fs={fs}/>
+        <RightDash p={p} data={data}/>
       </View>
     </View>
   );
@@ -557,13 +526,12 @@ export default function HomeScreen(){
 
   if(isTV){
     const n=Math.min(data.projects.length,3);
-    const rowH=Math.floor(height/n);
     return(
-      <View style={{flex:1,backgroundColor:D.bg,height}}>
+      <View style={{flex:1,backgroundColor:D.bg}}>
         <Stack.Screen options={{headerShown:false}}/>
         {data.projects.slice(0,n).map((p,i)=>(
           <React.Fragment key={p.project_id}>
-            <ProjectRow p={p} data={data} rowH={rowH} totalW={width} camIndex={i}/>
+            <ProjectRow p={p} data={data} camIndex={i}/>
             {i<n-1&&<View style={{height:1,backgroundColor:D.border}}/>}
           </React.Fragment>
         ))}

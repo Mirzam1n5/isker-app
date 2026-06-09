@@ -252,17 +252,15 @@ function CamFeed({name,w,h,camIndex}:{name:string;w:number;h:number;camIndex:num
   const [t,setT]=useState(new Date());
   useEffect(()=>{const id=setInterval(()=>setT(new Date()),1000);return()=>clearInterval(id);},[]);
 
-  // Camera sources per project index
   const CAM_SRCS: Record<number, {src:string;title:string}> = {
-  0: { src: '/videos/cam1.mp4', title: 'Site Camera 1' },
-  1: { src: '/videos/cam2.mp4', title: 'Site Camera 2' },
-  2: { src: '/videos/cam3.mp4', title: 'Site Camera 3' },
+    0: { src: '/videos/cam1.mp4', title: 'Site Camera 1' },
+    1: { src: '/videos/cam2.mp4', title: 'Site Camera 2' },
+    2: { src: '/videos/cam3.mp4', title: 'Site Camera 3' },
   };
 
   const cam = CAM_SRCS[camIndex] ?? CAM_SRCS[0];
 
   if(Platform.OS !== 'web'){
-    // Mobile fallback — placeholder
     return(
       <View style={{width:w,height:h,backgroundColor:'#000',borderWidth:1,borderColor:D.border,alignItems:'center',justifyContent:'center'}}>
         <Text style={{color:D.muted,fontSize:11,letterSpacing:2}}>CAM FEED</Text>
@@ -284,18 +282,25 @@ function CamFeed({name,w,h,camIndex}:{name:string;w:number;h:number;camIndex:num
         <Text style={{color:D.sub,fontSize:10,letterSpacing:1}}>{name.toUpperCase()}</Text>
         <Text style={{color:D.muted,fontSize:10}}>{t.toLocaleTimeString()}</Text>
       </View>
-      {/* iframe */}
-      <iframe
-        src={cam.src}
-        title={cam.title}
-        style={{width:'100%',height:'100%',border:'none',display:'block'}}
-        allow="autoplay; fullscreen; picture-in-picture; accelerometer; clipboard-write; encrypted-media; gyroscope; web-share"
-        allowFullScreen
-        referrerPolicy="strict-origin-when-cross-origin"
-        loading="eager"
+
+      {/* Video — autoplay + loop + fallback через onEnded */}
+      <div
+        style={{position:'absolute',top:0,left:0,width:'100%',height:'100%',zIndex:1}}
+        dangerouslySetInnerHTML={{
+          __html: `<video
+            src="${cam.src}"
+            autoplay
+            loop
+            muted
+            playsinline
+            onended="this.currentTime=0;this.play();"
+            style="width:100%;height:100%;object-fit:cover;display:block;"
+          ></video>`
+        }}
       />
+
       {/* Corner brackets */}
-      {([{top:8,left:8},{top:8,right:8},{bottom:8,left:8},{bottom:8,right:8}] as any[]).map((pos,i)=>(
+      {([{top:8,left:8},{top:8,right:8},{bottom:8,left:8},{bottom:8,right:8}] as any[]).name).map((pos,i)=>(
         <View key={i} style={{position:'absolute',...pos,width:16,height:16,
           borderTopWidth:pos.top!==undefined?1.5:0,borderBottomWidth:pos.bottom!==undefined?1.5:0,
           borderLeftWidth:pos.left!==undefined?1.5:0,borderRightWidth:pos.right!==undefined?1.5:0,

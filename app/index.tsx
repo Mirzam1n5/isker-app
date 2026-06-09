@@ -300,11 +300,11 @@ function CamFeed({name,w,h,camIndex}:{name:string;w:number;h:number;camIndex:num
       />
 
       {/* Corner brackets */}
-      {([{top:8,left:8},{top:8,right:8},{bottom:8,left:8},{bottom:8,right:8}] as any[]).name).map((pos,i)=>(
-        <View key={i} style={{position:'absolute',...pos,width:16,height:16,
-          borderTopWidth:pos.top!==undefined?1.5:0,borderBottomWidth:pos.bottom!==undefined?1.5:0,
-          borderLeftWidth:pos.left!==undefined?1.5:0,borderRightWidth:pos.right!==undefined?1.5:0,
-          borderColor:D.accent,pointerEvents:'none',zIndex:3}}/>
+      {([{top:8,left:8},{top:8,right:8},{bottom:8,left:8},{bottom:8,right:8}] as any[]).map((pos,i)=>(
+    <View key={i} style={{position:'absolute',...pos,width:16,height:16,
+    borderTopWidth:pos.top!==undefined?1.5:0,borderBottomWidth:pos.bottom!==undefined?1.5:0,
+    borderLeftWidth:pos.left!==undefined?1.5:0,borderRightWidth:pos.right!==undefined?1.5:0,
+    borderColor:D.accent,pointerEvents:'none',zIndex:3}}/>
       ))}
     </View>
   );

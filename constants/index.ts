@@ -1,5 +1,5 @@
 // ─── Google Sheets ───────────────────────────────────────────────
-export const SHEET_ID = '1tPNstqwTKwtz2OkTSdDgVfwL1toHx9O6';
+export const SHEET_ID = '1UxKwOurc0sHl2w7vZq6HgFg9Gea6ySoA';
 
 export const SHEET_NAMES = {
   PROJECTS:      'Projects',

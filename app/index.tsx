@@ -252,17 +252,24 @@ function BarChart({bars,w,h,grouped}:{bars:{label:string;v:number;v2?:number;col
 }
 
 // ── HBar ──────────────────────────────────────────────────────────
-function HBar({label,v,max,color,sub}:{label:string;v:number;max:number;color:string;sub?:string}) {
+function HBar({label,v,max,color,sub,rank,compact}:{label:string;v:number;max:number;color:string;sub?:string;rank?:number;compact?:boolean}) {
   const {D} = useTheme();
   const pct=max>0?(v/max)*100:0;
+  const py=compact?2:5;
+  const fs=compact?12:14;
+  const fv=compact?13:15;
+  const bh=compact?6:9;
   return (
-    <View style={{gap:3}}>
-      <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-        <Text style={{fontSize:12,color:D.text,flex:1}} numberOfLines={1}>{label}</Text>
-        <Text style={{fontSize:12,color,fontWeight:'700',marginLeft:8}}>{sub??v}</Text>
-      </View>
-      <View style={{height:7,backgroundColor:D.border,borderRadius:4}}>
-        <View style={{height:7,width:`${Math.min(pct,100)}%` as any,backgroundColor:color,borderRadius:4}}/>
+    <View style={{flexDirection:'row',alignItems:'center',gap:6,paddingVertical:py,borderBottomWidth:1,borderBottomColor:D.border}}>
+      {rank!=null&&<Text style={{fontSize:11,color:D.muted,fontWeight:'700',width:14,textAlign:'right'}}>{rank}</Text>}
+      <View style={{flex:1,gap:compact?2:4}}>
+        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+          <Text style={{fontSize:fs,color:D.text,fontWeight:'600',flex:1}} numberOfLines={1}>{label}</Text>
+          <Text style={{fontSize:fv,color,fontWeight:'800',marginLeft:6}}>{sub??v}</Text>
+        </View>
+        <View style={{height:bh,backgroundColor:D.border,borderRadius:2}}>
+          <View style={{height:bh,width:`${Math.min(pct,100)}%` as any,backgroundColor:color,borderRadius:2}}/>
+        </View>
       </View>
     </View>
   );
@@ -479,35 +486,25 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
           <View style={{flex:1,flexDirection:'row',gap:12,alignItems:'center'}}>
             {/* Donut */}
             <View style={{alignItems:'center',gap:4}}>
-              <Donut slices={[{v:activeW,c:D.green},{v:workers.length-activeW,c:D.muted}]} size={80} label={String(activeW)} sublabel="active"/>
+              <Donut slices={[{v:activeW,c:D.green},{v:workers.length-activeW,c:D.muted}]} size={110} label={String(activeW)} sublabel="active"/>
               <Text style={{fontSize:9,color:D.muted}}>of {workers.length}</Text>
             </View>
             {/* Dept bars */}
             <View style={{flex:1,gap:4}}>
               {depts.slice(0,5).map((d,i)=>(
-                <HBar key={d[0]} label={d[0]} v={d[1]} max={depts[0][1]} color={DC[i%7]} sub={String(d[1])}/>
+                <HBar key={d[0]} label={d[0]} v={d[1]} max={depts[0][1]} color={DC[i%7]} sub={String(d[1])} rank={i+1}/>
               ))}
             </View>
             {/* Divider */}
             <View style={{width:1,height:'100%' as any,backgroundColor:D.border}}/>
             {/* Phase progress */}
-            <View style={{flex:1,gap:4}}>
-              {phases.map(phase=>{
+            <View style={{flex:1,gap:0,overflow:'hidden'}}>
+              {phases.map((phase,i)=>{
                 const phMs=schedule.filter(m=>m.phase===phase);
                 const phDone=phMs.filter(m=>m.status==='Done').length;
                 const phPct=phMs.length>0?(phDone/phMs.length)*100:0;
                 const phCol=phPct===100?D.green:phMs.some(m=>m.status==='Delayed')?D.red:D.blue;
-                return(
-                  <View key={phase} style={{gap:2}}>
-                    <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-                      <Text style={{fontSize:10,color:D.text}}>{phase}</Text>
-                      <Text style={{fontSize:10,color:phCol,fontWeight:'700'}}>{fmtP(phPct)}</Text>
-                    </View>
-                    <View style={{height:6,backgroundColor:D.bg,borderRadius:3}}>
-                      <View style={{height:6,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:3}}/>
-                    </View>
-                  </View>
-                );
+                return <HBar key={phase} label={phase} v={phPct} max={100} color={phCol} sub={fmtP(phPct)} rank={i+1} compact/>;
               })}
               <View style={{backgroundColor:spi>=1?D.greenDim:D.redDim,borderWidth:1,
                 borderColor:spi>=1?D.green:D.red,padding:5,borderRadius:5,
@@ -531,27 +528,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
           }
           <Legend items={[{label:'Planned',color:D.blue},{label:'Actual',color:D.orange}]}/>
         </Card>
-        <Card style={{flex:2,padding:12,gap:6}}>
-          <SH label="By Category" color={D.orange}/>
-          <View style={{flex:1,gap:8,justifyContent:'center'}}>
-            {catData.map(c=>{
-              const max=catData[0]?.pl??1,over=c.ac>c.pl;
-              return(
-                <View key={c.cat} style={{gap:2}}>
-                  <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-                    <Text style={{fontSize:11,color:D.text,flex:1}} numberOfLines={1}>{c.cat}</Text>
-                    <Text style={{fontSize:11,color:over?D.red:D.green,fontWeight:'700'}}>{fmtM(c.ac)}</Text>
-                  </View>
-                  <View style={{height:8,backgroundColor:D.bg,borderRadius:4,overflow:'hidden'}}>
-                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.pl/max)*100}%` as any,backgroundColor:D.blue,opacity:0.25,borderRadius:4}}/>
-                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.ac/max)*100}%` as any,backgroundColor:over?D.red:D.green,opacity:0.85,borderRadius:4}}/>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-          <Legend items={[{label:'Planned',color:D.blue},{label:'Actual',color:D.green}]}/>
-        </Card>
+
         {evm.length>=2&&<>
           <Card style={{flex:3,padding:12,gap:6}}>
             <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
@@ -600,7 +577,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
               {v:issues.filter(i=>i.status==='Open'&&i.priority==='Medium').length,c:D.yellow},
               {v:issues.filter(i=>i.status==='Open'&&i.priority==='Low').length,c:D.blue},
               {v:issues.filter(i=>i.status!=='Open').length,c:D.green},
-            ]} size={84} label={String(openIss)} sublabel="open"/>
+            ]} size={110} label={String(openIss)} sublabel="open"/>
             <View style={{flex:1,gap:7}}>
               {[{l:'High',c:D.red},{l:'Medium',c:D.yellow},{l:'Low',c:D.blue},{l:'Resolved',c:D.green}].map(row=>{
                 const cnt=row.l==='Resolved'?issues.filter(i=>i.status!=='Open').length:issues.filter(i=>i.status==='Open'&&i.priority===row.l).length;
@@ -624,29 +601,15 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
           <View style={{flex:1,flexDirection:'row',gap:12,alignItems:'center'}}>
             <Donut
               slices={catData.map((c,i)=>({v:c.ac,c:DC[i%7]}))}
-              size={88}
+              size={120}
               label={fmtM(catData.reduce((s,c)=>s+c.ac,0))}
               sublabel="actual"
             />
-            <View style={{flex:1,gap:5}}>
+            <View style={{flex:1,justifyContent:'center'}}>
               {catData.map((c,i)=>{
                 const over=c.ac>c.pl;
                 const pct=c.pl>0?Math.round((c.ac/c.pl)*100):0;
-                return(
-                  <View key={c.cat} style={{gap:2}}>
-                    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-                      <View style={{flexDirection:'row',alignItems:'center',gap:5,flex:1}}>
-                        <View style={{width:8,height:8,borderRadius:4,backgroundColor:DC[i%7]}}/>
-                        <Text style={{fontSize:11,color:D.text,flex:1}} numberOfLines={1}>{c.cat}</Text>
-                      </View>
-                      <Text style={{fontSize:11,fontWeight:'800',color:over?D.red:D.green,marginLeft:6}}>{pct}%</Text>
-                    </View>
-                    <View style={{height:4,backgroundColor:D.bg,borderRadius:2,overflow:'hidden'}}>
-                      <View style={{position:'absolute',top:0,left:0,height:4,width:`${Math.min((c.pl/catData[0].pl)*100,100)}%` as any,backgroundColor:DC[i%7],opacity:0.25,borderRadius:2}}/>
-                      <View style={{position:'absolute',top:0,left:0,height:4,width:`${Math.min((c.ac/catData[0].pl)*100,100)}%` as any,backgroundColor:over?D.red:DC[i%7],borderRadius:2}}/>
-                    </View>
-                  </View>
-                );
+                return <HBar key={c.cat} label={c.cat} v={c.ac} max={catData[0]?.pl??1} color={over?D.red:DC[i%7]} sub={`${pct}%`} rank={i+1}/>;
               })}
             </View>
           </View>
@@ -663,7 +626,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
                 {v:msDel,   c:D.red},
                 {v:Math.max(0,schedule.length-msDone-msInP-msDel), c:D.muted},
               ]}
-              size={80}
+              size={110}
               label={`${msDone}/${schedule.length}`}
               sublabel="done"
             />
@@ -835,7 +798,7 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
           <View style={{flexDirection:'row',gap:20}}>
             {/* Left: Donut + counts */}
             <View style={{alignItems:'center',gap:8}}>
-              <Donut slices={[{v:activeW,c:D.green},{v:workers.length-activeW,c:D.muted}]} size={96} label={String(activeW)} sublabel="active"/>
+              <Donut slices={[{v:activeW,c:D.green},{v:workers.length-activeW,c:D.muted}]} size={120} label={String(activeW)} sublabel="active"/>
               <View style={{flexDirection:'row',gap:10}}>
                 <View style={{alignItems:'center'}}>
                   <Text style={{fontSize:9,color:D.muted}}>TOTAL</Text>
@@ -863,22 +826,12 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
             {/* Right: Phase progress */}
             <View style={{flex:1,gap:6}}>
               <Text style={{fontSize:9,color:D.muted,letterSpacing:1.5,textTransform:'uppercase',marginBottom:2}}>Phase Progress</Text>
-              {phases.map(phase=>{
+              {phases.map((phase,i)=>{
                 const phMs=schedule.filter(m=>m.phase===phase);
                 const phDone=phMs.filter(m=>m.status==='Done').length;
                 const phPct=phMs.length>0?(phDone/phMs.length)*100:0;
                 const phCol=phPct===100?D.green:phMs.some(m=>m.status==='Delayed')?D.red:D.blue;
-                return(
-                  <View key={phase} style={{gap:3}}>
-                    <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-                      <Text style={{fontSize:11,color:D.text}}>{phase}</Text>
-                      <Text style={{fontSize:11,color:phCol,fontWeight:'700'}}>{fmtP(phPct)}</Text>
-                    </View>
-                    <View style={{height:8,backgroundColor:D.bg,borderRadius:4}}>
-                      <View style={{height:8,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:4}}/>
-                    </View>
-                  </View>
-                );
+                return <HBar key={phase} label={phase} v={phPct} max={100} color={phCol} sub={fmtP(phPct)} rank={i+1} compact/>;
               })}
               {/* SPI pill */}
               <View style={{backgroundColor:spi>=1?D.greenDim:D.redDim,borderWidth:1,
@@ -909,24 +862,12 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
         </Card>
         <Card style={{flex:3,padding:16,gap:10}}>
           <SH label="By Category" color={D.orange}/>
-          <View style={{gap:9}}>
-            {catData.map(c=>{
+          <View style={{gap:2}}>
+            {catData.map((c,i)=>{
               const max=catData[0]?.pl??1,over=c.ac>c.pl;
-              return(
-                <View key={c.cat} style={{gap:3}}>
-                  <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-                    <Text style={{fontSize:12,color:D.text,flex:1}} numberOfLines={1}>{c.cat}</Text>
-                    <Text style={{fontSize:12,color:over?D.red:D.green,fontWeight:'700'}}>{fmtM(c.ac)}</Text>
-                  </View>
-                  <View style={{height:8,backgroundColor:D.bg,borderRadius:4,overflow:'hidden'}}>
-                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.pl/max)*100}%` as any,backgroundColor:D.blue,opacity:0.25,borderRadius:4}}/>
-                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.ac/max)*100}%` as any,backgroundColor:over?D.red:D.green,opacity:0.85,borderRadius:4}}/>
-                  </View>
-                </View>
-              );
+              return <HBar key={c.cat} label={c.cat} v={c.ac} max={max} color={over?D.red:DC[i%7]} sub={fmtM(c.ac)} rank={i+1}/>;
             })}
           </View>
-          <Legend items={[{label:'Planned',color:D.blue},{label:'Actual',color:D.green}]}/>
         </Card>
       </View>
 
@@ -979,7 +920,7 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
                 {v:issues.filter(i=>i.status==='Open'&&i.priority==='Medium').length,c:D.yellow},
                 {v:issues.filter(i=>i.status==='Open'&&i.priority==='Low').length,c:D.blue},
                 {v:issues.filter(i=>i.status!=='Open').length,c:D.green},
-              ]} size={88} label={String(openIss)} sublabel="open"/>
+              ]} size={120} label={String(openIss)} sublabel="open"/>
             </View>
             <View style={{gap:6}}>
               {[{l:'High',c:D.red},{l:'Medium',c:D.yellow},{l:'Low',c:D.blue},{l:'Resolved',c:D.green}].map(row=>{

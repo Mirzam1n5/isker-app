@@ -701,6 +701,8 @@ const tvTableStyles = StyleSheet.create({
     backgroundColor: COLORS.lightGray,
     borderWidth: 1,
     borderColor: COLORS.border,
+    borderRadius: 14,
+    overflow: 'hidden',
   },
   mobileRow: {
     flexDirection: 'row',
@@ -751,7 +753,7 @@ const tvTableStyles = StyleSheet.create({
 
 // ─── Styles ───────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  badge: { paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', borderRadius: 7 },
   badgeText: { fontSize: FONT.size.xs, fontWeight: '600', letterSpacing: 0.3 },
   sectionTitle: {
     fontSize: FONT.size.xs, fontWeight: '600', color: COLORS.sub,
@@ -759,12 +761,12 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: COLORS.lightGray, borderWidth: 1, borderColor: COLORS.border,
-    padding: 14, marginBottom: 8,
+    borderRadius: 14, padding: 14, marginBottom: 8,
   },
   chartCard: {
     // flex:1 causes overflow in ChartGrid — use percentage instead
     backgroundColor: COLORS.lightGray, borderWidth: 1, borderColor: COLORS.border,
-    padding: 10, margin: 4,
+    borderRadius: 14, padding: 10, margin: 4,
     overflow: 'hidden',
   },
   chartCardHeader: {
@@ -784,11 +786,11 @@ const styles = StyleSheet.create({
   },
   statKey: { fontSize: FONT.size.sm, color: COLORS.sub, flex: 1 },
   statVal: { fontSize: FONT.size.sm, fontWeight: '600', color: COLORS.white, textAlign: 'right' },
-  progressBg: { height: 5, backgroundColor: COLORS.muted, overflow: 'hidden' },
-  progressFill: { height: 5 },
+  progressBg: { height: 5, backgroundColor: COLORS.muted, overflow: 'hidden', borderRadius: 3 },
+  progressFill: { height: 5, borderRadius: 3 },
   kpiBox: {
     flex: 1, backgroundColor: '#0c0d1c', borderWidth: 1, borderColor: COLORS.border,
-    padding: 12, margin: 4,
+    borderRadius: 14, padding: 12, margin: 4,
   },
   kpiLabel: { fontSize: FONT.size.xs, color: COLORS.midGray, marginBottom: 4, letterSpacing: 0.3 },
   kpiValue: { fontSize: 18, fontWeight: '600', color: COLORS.white },
@@ -797,14 +799,14 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: 12, fontSize: FONT.size.md, color: COLORS.midGray },
   errorText: { fontSize: FONT.size.lg, fontWeight: '600', color: COLORS.white, marginBottom: 6 },
   errorSub: { fontSize: FONT.size.sm, color: COLORS.midGray, textAlign: 'center', marginBottom: 20 },
-  retryBtn: { backgroundColor: COLORS.black, paddingHorizontal: 24, paddingVertical: 10 },
+  retryBtn: { backgroundColor: COLORS.black, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 12 },
   retryText: { color: COLORS.white, fontWeight: '600', fontSize: FONT.size.md },
   gaugeLabel: { fontWeight: '700', color: COLORS.white, textAlign: 'center' },
   gaugeSub: { fontSize: FONT.size.xs, color: COLORS.midGray, marginTop: 2, textAlign: 'center' },
   barLabel: { fontSize: FONT.size.xs, color: COLORS.sub, flex: 1 },
   barNum: { fontSize: FONT.size.xs, color: COLORS.white, fontWeight: '600' },
-  barTrack: { height: 6, backgroundColor: COLORS.border },
-  barFill: { height: 6 },
+  barTrack: { height: 6, backgroundColor: COLORS.border, borderRadius: 3 },
+  barFill: { height: 6, borderRadius: 3 },
 
   modalOverlay: {
     flex: 1,

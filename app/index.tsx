@@ -1,8 +1,10 @@
-import React, { useEffect, useState, createContext, useContext } from 'react';
-import { View, Text, Platform, useWindowDimensions, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
+import { View, Text, Platform, useWindowDimensions, ScrollView, TouchableOpacity, TextInput, Pressable } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, G, Text as ST, Line, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useSheetData, SheetData, Project, Worker, BudgetRow, Milestone, EvmRow, Issue } from '../hooks/useSheetData';
+import { getJSON, setJSON } from '../hooks/useStorage';
 import { SHEET_ID as DEFAULT_SHEET_ID } from '../constants';
 
 // ── Theme palettes ──────────────────────────────────────────────────
@@ -586,8 +588,10 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
         </>}
       </View>
 
-      {/* ══ ROW 3: Issues ══ */}
+      {/* ══ ROW 3: Issues + Budget Pie + Daily Reports ══ */}
       <View style={{flex:4,flexDirection:'row',gap:8}}>
+
+        {/* Issues */}
         <Card style={{flex:2,padding:12,gap:8}}>
           <SH label="Issues" color={D.red}/>
           <View style={{flex:1,flexDirection:'row',gap:14,alignItems:'center'}}>
@@ -597,7 +601,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
               {v:issues.filter(i=>i.status==='Open'&&i.priority==='Low').length,c:D.blue},
               {v:issues.filter(i=>i.status!=='Open').length,c:D.green},
             ]} size={84} label={String(openIss)} sublabel="open"/>
-            <View style={{flex:1,gap:8}}>
+            <View style={{flex:1,gap:7}}>
               {[{l:'High',c:D.red},{l:'Medium',c:D.yellow},{l:'Low',c:D.blue},{l:'Resolved',c:D.green}].map(row=>{
                 const cnt=row.l==='Resolved'?issues.filter(i=>i.status!=='Open').length:issues.filter(i=>i.status==='Open'&&i.priority===row.l).length;
                 return(
@@ -613,6 +617,75 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
             </View>
           </View>
         </Card>
+
+        {/* Budget by Category — Pie */}
+        <Card style={{flex:2.5,padding:12,gap:8}}>
+          <SH label="Budget by Category" color={D.orange}/>
+          <View style={{flex:1,flexDirection:'row',gap:12,alignItems:'center'}}>
+            <Donut
+              slices={catData.map((c,i)=>({v:c.ac,c:DC[i%7]}))}
+              size={88}
+              label={fmtM(catData.reduce((s,c)=>s+c.ac,0))}
+              sublabel="actual"
+            />
+            <View style={{flex:1,gap:5}}>
+              {catData.map((c,i)=>{
+                const over=c.ac>c.pl;
+                const pct=c.pl>0?Math.round((c.ac/c.pl)*100):0;
+                return(
+                  <View key={c.cat} style={{gap:2}}>
+                    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+                      <View style={{flexDirection:'row',alignItems:'center',gap:5,flex:1}}>
+                        <View style={{width:8,height:8,borderRadius:4,backgroundColor:DC[i%7]}}/>
+                        <Text style={{fontSize:11,color:D.text,flex:1}} numberOfLines={1}>{c.cat}</Text>
+                      </View>
+                      <Text style={{fontSize:11,fontWeight:'800',color:over?D.red:D.green,marginLeft:6}}>{pct}%</Text>
+                    </View>
+                    <View style={{height:4,backgroundColor:D.bg,borderRadius:2,overflow:'hidden'}}>
+                      <View style={{position:'absolute',top:0,left:0,height:4,width:`${Math.min((c.pl/catData[0].pl)*100,100)}%` as any,backgroundColor:DC[i%7],opacity:0.25,borderRadius:2}}/>
+                      <View style={{position:'absolute',top:0,left:0,height:4,width:`${Math.min((c.ac/catData[0].pl)*100,100)}%` as any,backgroundColor:over?D.red:DC[i%7],borderRadius:2}}/>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        </Card>
+
+        {/* Schedule status mini summary */}
+        <Card style={{flex:1.5,padding:12,gap:8}}>
+          <SH label="Schedule Status" color={D.green}/>
+          <View style={{flex:1,alignItems:'center',justifyContent:'center',gap:8}}>
+            <Donut
+              slices={[
+                {v:msDone,  c:D.green},
+                {v:msInP,   c:D.blue},
+                {v:msDel,   c:D.red},
+                {v:Math.max(0,schedule.length-msDone-msInP-msDel), c:D.muted},
+              ]}
+              size={80}
+              label={`${msDone}/${schedule.length}`}
+              sublabel="done"
+            />
+            <View style={{gap:5,alignSelf:'stretch'}}>
+              {[
+                {l:'Done',      v:msDone, c:D.green},
+                {l:'In Progress',v:msInP,  c:D.blue},
+                {l:'Delayed',   v:msDel,  c:D.red},
+                {l:'Pending',   v:Math.max(0,schedule.length-msDone-msInP-msDel), c:D.muted},
+              ].map(row=>(
+                <View key={row.l} style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+                  <View style={{flexDirection:'row',alignItems:'center',gap:5}}>
+                    <View style={{width:7,height:7,borderRadius:3.5,backgroundColor:row.c}}/>
+                    <Text style={{fontSize:11,color:D.sub}}>{row.l}</Text>
+                  </View>
+                  <Text style={{fontSize:13,fontWeight:'800',color:row.c}}>{row.v}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </Card>
+
       </View>
 
     </View>
@@ -973,19 +1046,52 @@ function parseSheetId(input:string):string|null {
 }
 
 interface SheetEntry { id: string; label: string; }
-const STORAGE_KEY = 'isker_extra_sheets';
+const SHEETS_STORAGE_KEY = 'isker_extra_sheets';
+const THEME_STORAGE_KEY = 'isker_theme_dark';
 
-function loadExtraSheets(): SheetEntry[] {
-  if(typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
+// Shared hook: extra sheets list, persisted via AsyncStorage so web and
+// mobile (iOS/Android/Expo Go) read and write the exact same data —
+// no more "two separate services" — both platforms sync through the
+// same storage key once the screen mounts.
+function useExtraSheets() {
+  const [extraSheets, setExtraSheetsState] = useState<SheetEntry[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    getJSON<SheetEntry[]>(SHEETS_STORAGE_KEY, []).then(saved => {
+      if (mounted) { setExtraSheetsState(saved); setLoaded(true); }
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  const setExtraSheets = useCallback((updater: SheetEntry[] | ((prev: SheetEntry[]) => SheetEntry[])) => {
+    setExtraSheetsState(prev => {
+      const next = typeof updater === 'function' ? (updater as any)(prev) : updater;
+      setJSON(SHEETS_STORAGE_KEY, next);
+      return next;
+    });
+  }, []);
+
+  return { extraSheets, setExtraSheets, loaded };
 }
 
-function saveExtraSheets(sheets: SheetEntry[]) {
-  if(typeof window === 'undefined') return;
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sheets)); } catch {}
+// Shared hook: dark/light theme preference persisted across platforms.
+function usePersistedTheme() {
+  const [isDark, setIsDarkState] = useState(true);
+  useEffect(() => {
+    let mounted = true;
+    getJSON<boolean>(THEME_STORAGE_KEY, true).then(v => { if (mounted) setIsDarkState(v); });
+    return () => { mounted = false; };
+  }, []);
+  const setIsDark = useCallback((v: boolean | ((prev: boolean) => boolean)) => {
+    setIsDarkState(prev => {
+      const next = typeof v === 'function' ? (v as any)(prev) : v;
+      setJSON(THEME_STORAGE_KEY, next);
+      return next;
+    });
+  }, []);
+  return [isDark, setIsDark] as const;
 }
 
 // Single project data fetcher component
@@ -1106,7 +1212,7 @@ function WebLayout({data,defaultSheetId}:{data:SheetData;defaultSheetId:string})
   const [activeIdx,setActiveIdx]=useState(0);
   const [tvMode,setTvMode]=useState(false);
   const [showAdd,setShowAdd]=useState(false);
-  const [extraSheets,setExtraSheets]=useState<SheetEntry[]>(()=>loadExtraSheets());
+  const {extraSheets,setExtraSheets} = useExtraSheets();
 
   // First tab = default sheet (from constants), rest = extra sheets
   const defaultLabel = data.projects[0]?.project_name ?? 'Project 1';
@@ -1116,16 +1222,12 @@ function WebLayout({data,defaultSheetId}:{data:SheetData;defaultSheetId:string})
   ];
 
   const handleAddSheet = (entry:SheetEntry) => {
-    const updated = [...extraSheets, entry];
-    setExtraSheets(updated);
-    saveExtraSheets(updated);
+    setExtraSheets(prev => [...prev, entry]);
     setActiveIdx(allTabs.length); // switch to new tab
   };
 
   const handleRemoveSheet = (idx:number) => {
-    const updated = extraSheets.filter((_,i)=>i!==idx-1);
-    setExtraSheets(updated);
-    saveExtraSheets(updated);
+    setExtraSheets(prev => prev.filter((_,i)=>i!==idx-1));
     if(activeIdx>=allTabs.length-1) setActiveIdx(allTabs.length-2);
   };
 
@@ -1226,52 +1328,125 @@ function WebLayout({data,defaultSheetId}:{data:SheetData;defaultSheetId:string})
 // ════════════════════════════════════════════════════════════════
 // MOBILE HOME
 // ════════════════════════════════════════════════════════════════
-function MobileHome({data}:{data:SheetData}) {
-  const {D} = useTheme();
+// Shows the default sheet's projects PLUS a horizontal sheet-picker for
+// any extra Google Sheets the user added on web — so mobile and web
+// always reflect the same connected sheets (shared AsyncStorage state).
+function MobileHome({data:defaultData, defaultSheetId}:{data:SheetData; defaultSheetId:string}) {
+  const {D,isDark,toggleTheme} = useTheme();
   const PC = getPC(D);
   const router=useRouter();
+  const {extraSheets,setExtraSheets,loaded} = useExtraSheets();
+  const [activeIdx,setActiveIdx]=useState(0);
+  const [showAdd,setShowAdd]=useState(false);
+
+  const allTabs = [{id:defaultSheetId,label:'Main'}, ...extraSheets];
+  const activeSheet = allTabs[activeIdx] ?? allTabs[0];
+  const isDefaultTab = activeIdx===0;
+
+  const handleAddSheet = (entry:SheetEntry) => {
+    setExtraSheets(prev => [...prev, entry]);
+    setActiveIdx(allTabs.length); // switch to the newly added tab
+  };
+
+  // Only fetch a second sheet when an extra tab is actually selected.
+  const { data: extraData, loading: extraLoading, error: extraError } =
+    useSheetData(isDefaultTab ? undefined : activeSheet.id);
+
+  const data = isDefaultTab ? defaultData : extraData;
+  const tabLoading = !isDefaultTab && extraLoading;
+  const tabError = !isDefaultTab && extraError;
+
   return(
-    <ScrollView style={{flex:1,backgroundColor:D.bg}} contentContainerStyle={{padding:14,gap:12}}>
+    <View style={{flex:1,backgroundColor:D.bg}}>
       <Stack.Screen options={{
         headerShown:true,title:'ISKER',headerTitleAlign:'center',
         headerStyle:{backgroundColor:D.panel},
         headerTitleStyle:{color:D.text,fontWeight:'800',fontSize:16,letterSpacing:3},
         headerShadowVisible:false,
+        headerRight:()=>(
+          <View style={{flexDirection:'row',alignItems:'center',gap:4}}>
+            <TouchableOpacity onPress={()=>setShowAdd(true)} style={{paddingHorizontal:8}}>
+              <Ionicons name="add-circle-outline" size={22} color={D.text}/>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={toggleTheme} style={{paddingHorizontal:8}}>
+              <Ionicons name={isDark?'sunny-outline':'moon-outline'} size={20} color={D.text}/>
+            </TouchableOpacity>
+          </View>
+        ),
       }}/>
-      {data.projects.map((p,i)=>{
-        const prog=num(p.progress_pct),cpi=num(p.cpi),spi=num(p.spi);
-        const col=PC[i%3];
-        return(
-          <TouchableOpacity key={p.project_id}
-            style={{backgroundColor:D.card,borderRadius:12,borderWidth:1,borderColor:D.border,
-              borderTopWidth:4,borderTopColor:col,padding:16,gap:12,
-              shadowColor:'rgba(0,0,0,0.06)',shadowOffset:{width:0,height:2},shadowOpacity:1,shadowRadius:6,elevation:2}}
-            onPress={()=>router.push({pathname:'/project/[id]',params:{id:p.project_id}})}>
-            <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
-              <View style={{width:8,height:8,borderRadius:4,backgroundColor:sCol(D,p.status)}}/>
-              <Text style={{color:sCol(D,p.status),fontSize:10,fontWeight:'700',letterSpacing:1}}>{p.status.toUpperCase()}</Text>
-            </View>
-            <Text style={{color:D.text,fontSize:18,fontWeight:'900'}}>{p.project_name}</Text>
-            <Text style={{color:D.muted,fontSize:12}}>{p.location}</Text>
-            <View style={{alignItems:'center'}}>
-              <ArcGauge pct={prog} color={col} size={140} label={fmtP(prog)} sublabel="progress"/>
-            </View>
-            <View style={{flexDirection:'row',gap:10}}>
-              <View style={{flex:1,backgroundColor:cpi>=1?D.greenDim:D.redDim,padding:10,alignItems:'center',
-                borderWidth:1,borderColor:cpi>=1?D.green:D.red,borderRadius:8}}>
-                <Text style={{fontSize:10,color:D.sub}}>CPI</Text>
-                <Text style={{fontSize:20,fontWeight:'900',color:iCol(D,cpi)}}>{cpi.toFixed(2)}</Text>
-              </View>
-              <View style={{flex:1,backgroundColor:spi>=1?D.greenDim:D.redDim,padding:10,alignItems:'center',
-                borderWidth:1,borderColor:spi>=1?D.green:D.red,borderRadius:8}}>
-                <Text style={{fontSize:10,color:D.sub}}>SPI</Text>
-                <Text style={{fontSize:20,fontWeight:'900',color:iCol(D,spi)}}>{spi.toFixed(2)}</Text>
-              </View>
-            </View>
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
+
+      {showAdd && <AddProjectModal onAdd={handleAddSheet} onClose={()=>setShowAdd(false)}/>}
+
+
+      {/* Sheet tabs — only shown when there's more than one connected sheet */}
+      {loaded && allTabs.length>1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+          style={{maxHeight:46,borderBottomWidth:1,borderBottomColor:D.border,backgroundColor:D.panel}}
+          contentContainerStyle={{paddingHorizontal:10,gap:6,alignItems:'center'}}>
+          {allTabs.map((tab,i)=>{
+            const active=activeIdx===i;
+            return(
+              <Pressable key={tab.id+i} onPress={()=>setActiveIdx(i)}
+                style={{paddingHorizontal:12,paddingVertical:7,borderRadius:8,
+                  backgroundColor:active?D.blue:D.card,
+                  borderWidth:1,borderColor:active?D.blue:D.border}}>
+                <Text style={{fontSize:12,fontWeight:'700',color:active?'#fff':D.sub}} numberOfLines={1}>{tab.label}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
+
+      {tabLoading && (
+        <View style={{flex:1,alignItems:'center',justifyContent:'center'}}>
+          <Text style={{color:D.muted,fontSize:14,letterSpacing:2}}>LOADING SHEET...</Text>
+        </View>
+      )}
+
+      {tabError && (
+        <View style={{flex:1,alignItems:'center',justifyContent:'center',gap:10,padding:20}}>
+          <Text style={{color:D.red,fontSize:14,textAlign:'center'}}>⚠ {tabError}</Text>
+        </View>
+      )}
+
+      {!tabLoading && !tabError && data && (
+        <ScrollView style={{flex:1}} contentContainerStyle={{padding:14,gap:12}}>
+          {data.projects.map((p,i)=>{
+            const prog=num(p.progress_pct),cpi=num(p.cpi),spi=num(p.spi);
+            const col=PC[i%3];
+            return(
+              <TouchableOpacity key={p.project_id}
+                style={{backgroundColor:D.card,borderRadius:12,borderWidth:1,borderColor:D.border,
+                  borderTopWidth:4,borderTopColor:col,padding:16,gap:12,
+                  shadowColor:'rgba(0,0,0,0.06)',shadowOffset:{width:0,height:2},shadowOpacity:1,shadowRadius:6,elevation:2}}
+                onPress={()=>router.push({pathname:'/project/[id]',params:{id:p.project_id}})}>
+                <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
+                  <View style={{width:8,height:8,borderRadius:4,backgroundColor:sCol(D,p.status)}}/>
+                  <Text style={{color:sCol(D,p.status),fontSize:10,fontWeight:'700',letterSpacing:1}}>{p.status.toUpperCase()}</Text>
+                </View>
+                <Text style={{color:D.text,fontSize:18,fontWeight:'900'}}>{p.project_name}</Text>
+                <Text style={{color:D.muted,fontSize:12}}>{p.location}</Text>
+                <View style={{alignItems:'center'}}>
+                  <ArcGauge pct={prog} color={col} size={140} label={fmtP(prog)} sublabel="progress"/>
+                </View>
+                <View style={{flexDirection:'row',gap:10}}>
+                  <View style={{flex:1,backgroundColor:cpi>=1?D.greenDim:D.redDim,padding:10,alignItems:'center',
+                    borderWidth:1,borderColor:cpi>=1?D.green:D.red,borderRadius:8}}>
+                    <Text style={{fontSize:10,color:D.sub}}>CPI</Text>
+                    <Text style={{fontSize:20,fontWeight:'900',color:iCol(D,cpi)}}>{cpi.toFixed(2)}</Text>
+                  </View>
+                  <View style={{flex:1,backgroundColor:spi>=1?D.greenDim:D.redDim,padding:10,alignItems:'center',
+                    borderWidth:1,borderColor:spi>=1?D.green:D.red,borderRadius:8}}>
+                    <Text style={{fontSize:10,color:D.sub}}>SPI</Text>
+                    <Text style={{fontSize:20,fontWeight:'900',color:iCol(D,spi)}}>{spi.toFixed(2)}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+    </View>
   );
 }
 
@@ -1279,7 +1454,7 @@ function MobileHome({data}:{data:SheetData}) {
 // MAIN
 // ════════════════════════════════════════════════════════════════
 export default function HomeScreen() {
-  const [isDark,setIsDark]=useState(false);
+  const [isDark,setIsDark]=usePersistedTheme();
   const D = isDark?DARK:LIGHT;
   const toggleTheme=()=>setIsDark(v=>!v);
 
@@ -1315,5 +1490,5 @@ function HomeScreenInner() {
     </View>
   );
 
-  return isWeb?<WebLayout data={data} defaultSheetId={DEFAULT_SHEET_ID}/>:<MobileHome data={data}/>;
+  return isWeb?<WebLayout data={data} defaultSheetId={DEFAULT_SHEET_ID}/>:<MobileHome data={data} defaultSheetId={DEFAULT_SHEET_ID}/>;
 }

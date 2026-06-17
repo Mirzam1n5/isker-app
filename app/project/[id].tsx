@@ -25,7 +25,7 @@ function MetricCard({ icon, label, value, sub, accent, onPress }: {
         <View style={[styles.iconBox, { backgroundColor: accent ? accent + '22' : COLORS.muted + '33' }]}>
           <Ionicons name={icon} size={18} color={accent ?? COLORS.white} />
         </View>
-        <Ionicons name="chevron-forward" size={12} color="#ccc" />
+        <Ionicons name="chevron-forward" size={12} color={COLORS.midGray} />
       </View>
       <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
       <Text style={styles.metricLabel}>{label}</Text>
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.black },
   content: { padding: 16, paddingBottom: 40 },
   heroCard: {
-    backgroundColor: COLORS.lightGray, borderWidth: 1,
+    backgroundColor: COLORS.lightGray, borderWidth: 1, borderRadius: 14,
     borderColor: COLORS.border, padding: 16, marginBottom: 8,
   },
   heroTop: {
@@ -191,14 +191,14 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   metricCard: {
     width: '47.5%',
-    backgroundColor: COLORS.lightGray, borderWidth: 1,
+    backgroundColor: COLORS.lightGray, borderWidth: 1, borderRadius: 14,
     borderColor: COLORS.border, padding: 14,
   },
   metricTop: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', marginBottom: 10,
   },
-  iconBox: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  iconBox: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   metricValue: { fontSize: 20, fontWeight: '600', color: COLORS.white, marginBottom: 2 },
   metricLabel: { fontSize: FONT.size.xs, fontWeight: '600', color: COLORS.white },
   metricSub: { fontSize: FONT.size.xs, color: COLORS.sub, marginTop: 2 },

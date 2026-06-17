@@ -42,8 +42,8 @@ function CollapsibleSection({
 
 const cStyles = StyleSheet.create({
   wrapper: {
-    borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.lightGray, marginBottom: 8,
+    borderWidth: 1, borderColor: COLORS.border, borderRadius: 14,
+    backgroundColor: COLORS.lightGray, marginBottom: 8, overflow: 'hidden',
   },
   header: {
     flexDirection: 'row', justifyContent: 'space-between',
@@ -78,7 +78,7 @@ function KpiGrid({ items }: { items: { label: string; value: string; note?: stri
 function AvatarRow({ name, role, company, extra }: {
   name: string; role: string; company?: string; extra?: React.ReactNode;
 }) {
-  const initials = name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  const initials = (name ?? '?').split(' ').filter(Boolean).map((n) => n[0]).join('').slice(0, 2).toUpperCase() || '?';
   return (
     <View style={styles.aRow}>
       <View style={styles.avatar}>
@@ -238,7 +238,7 @@ function WorkersDetail({ projectId, data }: { projectId: string; data: any }) {
           <View style={[styles.aRow, i === workers.length - 1 && { borderBottomWidth: 0 }]}>
             <View style={styles.avatar}>
               <Text style={styles.avatarTxt}>
-                {(row.name as string).split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                {((row.name as string) ?? '?').split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
               </Text>
             </View>
             <View style={{ flex: 1 }}>
@@ -927,7 +927,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   avatar: {
-    width: 34, height: 34, backgroundColor: COLORS.card,
+    width: 34, height: 34, backgroundColor: COLORS.card, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
   },
   avatarTxt: { fontSize: FONT.size.xs, fontWeight: '600', color: COLORS.white },

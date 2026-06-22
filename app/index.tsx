@@ -588,38 +588,11 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
         </>}
       </View>
 
-      {/* ══ ROW 3: Issues + Budget Pie + Daily Reports ══ */}
+      {/* ══ ROW 3: Budget Pie ══ */}
       <View style={{flex:4,flexDirection:'row',gap:8}}>
 
-        {/* Issues */}
-        <Card style={{flex:2,padding:12,gap:8}}>
-          <SH label="Issues" color={D.red}/>
-          <View style={{flex:1,flexDirection:'row',gap:14,alignItems:'center'}}>
-            <Donut slices={[
-              {v:issues.filter(i=>i.status==='Open'&&i.priority==='High').length,c:D.red},
-              {v:issues.filter(i=>i.status==='Open'&&i.priority==='Medium').length,c:D.yellow},
-              {v:issues.filter(i=>i.status==='Open'&&i.priority==='Low').length,c:D.blue},
-              {v:issues.filter(i=>i.status!=='Open').length,c:D.green},
-            ]} size={84} label={String(openIss)} sublabel="open"/>
-            <View style={{flex:1,gap:7}}>
-              {[{l:'High',c:D.red},{l:'Medium',c:D.yellow},{l:'Low',c:D.blue},{l:'Resolved',c:D.green}].map(row=>{
-                const cnt=row.l==='Resolved'?issues.filter(i=>i.status!=='Open').length:issues.filter(i=>i.status==='Open'&&i.priority===row.l).length;
-                return(
-                  <View key={row.l} style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-                    <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
-                      <View style={{width:9,height:9,borderRadius:4.5,backgroundColor:row.c}}/>
-                      <Text style={{fontSize:13,color:D.sub}}>{row.l}</Text>
-                    </View>
-                    <Text style={{fontSize:16,color:row.c,fontWeight:'800'}}>{cnt}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        </Card>
-
         {/* Budget by Category — Pie */}
-        <Card style={{flex:2.5,padding:12,gap:8}}>
+        <Card style={{flex:1,padding:12,gap:8}}>
           <SH label="Budget by Category" color={D.orange}/>
           <View style={{flex:1,flexDirection:'row',gap:12,alignItems:'center'}}>
             <Donut
@@ -648,40 +621,6 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
                   </View>
                 );
               })}
-            </View>
-          </View>
-        </Card>
-
-        {/* Schedule status mini summary */}
-        <Card style={{flex:1.5,padding:12,gap:8}}>
-          <SH label="Schedule Status" color={D.green}/>
-          <View style={{flex:1,alignItems:'center',justifyContent:'center',gap:8}}>
-            <Donut
-              slices={[
-                {v:msDone,  c:D.green},
-                {v:msInP,   c:D.blue},
-                {v:msDel,   c:D.red},
-                {v:Math.max(0,schedule.length-msDone-msInP-msDel), c:D.muted},
-              ]}
-              size={80}
-              label={`${msDone}/${schedule.length}`}
-              sublabel="done"
-            />
-            <View style={{gap:5,alignSelf:'stretch'}}>
-              {[
-                {l:'Done',      v:msDone, c:D.green},
-                {l:'In Progress',v:msInP,  c:D.blue},
-                {l:'Delayed',   v:msDel,  c:D.red},
-                {l:'Pending',   v:Math.max(0,schedule.length-msDone-msInP-msDel), c:D.muted},
-              ].map(row=>(
-                <View key={row.l} style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-                  <View style={{flexDirection:'row',alignItems:'center',gap:5}}>
-                    <View style={{width:7,height:7,borderRadius:3.5,backgroundColor:row.c}}/>
-                    <Text style={{fontSize:11,color:D.sub}}>{row.l}</Text>
-                  </View>
-                  <Text style={{fontSize:13,fontWeight:'800',color:row.c}}>{row.v}</Text>
-                </View>
-              ))}
             </View>
           </View>
         </Card>

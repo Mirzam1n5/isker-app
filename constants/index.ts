@@ -1,6 +1,4 @@
-// ─── Google Sheets ───────────────────────────────────────────────
-export const SHEET_ID = '1UxKwOurc0sHl2w7vZq6HgFg9Gea6ySoA';
-
+// ─── Google Sheets sheet/tab names (used inside each connected sheet) ──
 export const SHEET_NAMES = {
   PROJECTS:      'Projects',
   WORKERS:       'Workers',

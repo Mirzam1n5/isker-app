@@ -256,17 +256,23 @@ function BudgetColumns({data,w,h}:{data:{cat:string;pl:number;ac:number}[];w:num
   const {D} = useTheme();
   if(!data.length) return null;
   const max = Math.max(...data.map(d=>Math.max(d.pl,d.ac)), 1);
-  const padT=28, padB=26, padH=10;
+  const padT=26, padB=24, padH=10;
   const cw=w-padH*2, ch=h-padT-padB;
-  const groupW = cw/data.length;
-  const barW = Math.min(56, groupW*0.36);
-  const gap = barW*0.2;
+  // Cap how wide a single group can get so categories don't sprawl
+  // across a near-empty chart — center the actually-used width instead.
+  const maxGroupW = 150;
+  const rawGroupW = cw/data.length;
+  const groupW = Math.min(rawGroupW, maxGroupW);
+  const usedW = groupW*data.length;
+  const offsetX = padH + Math.max(0,(cw-usedW)/2);
+  const barW = Math.min(40, groupW*0.34);
+  const gap = barW*0.22;
 
   return(
     <Svg width={w} height={h}>
       <Line x1={padH} y1={padT+ch} x2={w-padH} y2={padT+ch} stroke={D.border} strokeWidth={1}/>
       {data.map((d,i)=>{
-        const cx = padH + groupW*i + groupW/2;
+        const cx = offsetX + groupW*i + groupW/2;
         const plH = Math.max(2,(d.pl/max)*ch);
         const acH = Math.max(2,(d.ac/max)*ch);
         const over = d.ac>d.pl;
@@ -279,11 +285,11 @@ function BudgetColumns({data,w,h}:{data:{cat:string;pl:number;ac:number}[];w:num
             {/* Actual bar */}
             <Rect x={acX} y={padT+ch-acH} width={barW} height={acH} fill={over?D.red:D.green} rx={2}/>
             {/* Value label above the taller bar */}
-            <ST x={cx} y={padT+ch-Math.max(plH,acH)-7} textAnchor="middle" fontSize={11} fill={over?D.red:D.text} fontWeight="700">
+            <ST x={cx} y={padT+ch-Math.max(plH,acH)-6} textAnchor="middle" fontSize={10} fill={over?D.red:D.text} fontWeight="700">
               {fmtM(d.ac)}
             </ST>
             {/* Category label */}
-            <ST x={cx} y={h-8} textAnchor="middle" fontSize={11} fill={D.sub} fontWeight="600">
+            <ST x={cx} y={h-7} textAnchor="middle" fontSize={10} fill={D.sub} fontWeight="600">
               {d.cat.length>9?d.cat.slice(0,8)+'…':d.cat}
             </ST>
           </G>
@@ -610,7 +616,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
       </View>
 
       {/* ══ ROW 3: Budget by Category ══ */}
-      <View style={{flex:4,flexDirection:'row',gap:8}}>
+      <View style={{flex:2.6,flexDirection:'row',gap:8}}>
         <Card style={{flex:1,padding:14,gap:8}}>
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
             <SH label="Budget by Category" color={D.orange}/>
@@ -625,8 +631,8 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
               </View>
             </View>
           </View>
-          <View style={{flex:1}} onLayout={e=>setChartW(e.nativeEvent.layout.width)}>
-            {chartW>0&&<BudgetColumns data={catData} w={chartW} h={sc(220)}/>}
+          <View style={{flex:1,alignItems:'center',justifyContent:'center'}} onLayout={e=>setChartW(e.nativeEvent.layout.width)}>
+            {chartW>0&&<BudgetColumns data={catData} w={chartW} h={Math.min(sc(160), chartW*0.28)}/>}
           </View>
         </Card>
       </View>

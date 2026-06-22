@@ -264,8 +264,8 @@ function HBar({label,v,max,color,sub,rank,compact}:{label:string;v:number;max:nu
       {rank!=null&&<Text style={{fontSize:11,color:D.muted,fontWeight:'700',width:14,textAlign:'right'}}>{rank}</Text>}
       <View style={{flex:1,gap:compact?2:4}}>
         <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-          <Text style={{fontSize:fs,color:D.text,fontWeight:'600',flex:1}} numberOfLines={1}>{label}</Text>
-          <Text style={{fontSize:fv,color,fontWeight:'800',marginLeft:6}}>{sub??v}</Text>
+          <Text style={{fontSize:fs,color:D.text,fontWeight:'600',flex:1}} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{label}</Text>
+          <Text style={{fontSize:fv,color,fontWeight:'800',marginLeft:6}} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.6}>{sub??v}</Text>
         </View>
         <View style={{height:bh,backgroundColor:D.border,borderRadius:2}}>
           <View style={{height:bh,width:`${Math.min(pct,100)}%` as any,backgroundColor:color,borderRadius:2}}/>
@@ -359,6 +359,10 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
   const {D} = useTheme();
   const PC = getPC(D);
   const DC = getDC(D);
+  const {width:W, height:H} = useWindowDimensions();
+  // Scale everything proportionally to viewport
+  const scale = Math.min(W/1440, H/900);
+  const sc = (base:number) => Math.max(Math.round(base*scale), Math.round(base*0.55));
 
   const workers  = data.workers.filter(w=>w.project_id===p.project_id);
   const evm      = data.evm.filter(e=>e.project_id===p.project_id);
@@ -419,7 +423,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
           <Text style={{fontSize:18,color:D.text,fontWeight:'900'}}>{p.project_name}</Text>
           <Text style={{fontSize:10,color:D.sub}}>{p.client} · {p.location}</Text>
         </View>
-        <Text style={{fontSize:34,fontWeight:'900',color,marginLeft:'auto' as any}}>{fmtP(prog)}</Text>
+        <Text style={{fontSize:sc(34),fontWeight:'900',color,marginLeft:'auto' as any}}>{fmtP(prog)}</Text>
         <View style={{width:1,height:36,backgroundColor:D.border}}/>
         <View style={{flexDirection:'row',gap:8,flex:1,justifyContent:'flex-end'}}>
           {[
@@ -427,12 +431,10 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
             {l:'Spent',v:fmtM(spent),c:bCol,s:fmtP(bPct)},
             {l:'CPI',v:cpi.toFixed(2),c:iCol(D,cpi)},
             {l:'SPI',v:spi.toFixed(2),c:iCol(D,spi)},
-            {l:'Workers',v:`${activeW}/${workers.length}`,c:D.cyan},
-            {l:'Issues',v:String(openIss),c:openIss>0?D.yellow:D.green,s:`${highIss} crit.`},
           ].map(kpi=>(
-            <View key={kpi.l} style={{backgroundColor:D.bg,borderRadius:6,borderWidth:1,borderColor:D.border,paddingHorizontal:10,paddingVertical:4,alignItems:'center',minWidth:64}}>
-              <Text style={{fontSize:8,color:D.muted,letterSpacing:1,textTransform:'uppercase'}}>{kpi.l}</Text>
-              <Text style={{fontSize:15,fontWeight:'900',color:kpi.c,lineHeight:17}}>{kpi.v}</Text>
+            <View key={kpi.l} style={{backgroundColor:D.bg,borderRadius:6,borderWidth:1,borderColor:D.border,paddingHorizontal:sc(10),paddingVertical:4,alignItems:'center',minWidth:sc(64)}}>
+              <Text style={{fontSize:sc(8),color:D.muted,letterSpacing:1,textTransform:'uppercase'}}>{kpi.l}</Text>
+              <Text style={{fontSize:sc(15),fontWeight:'900',color:kpi.c,lineHeight:sc(17)}}>{kpi.v}</Text>
               {kpi.s&&<Text style={{fontSize:8,color:D.muted}}>{kpi.s}</Text>}
             </View>
           ))}
@@ -442,7 +444,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
       {/* ══ ROW 1: Gauge | CPI/SPI | Manpower | Milestones ══ */}
       <View style={{flex:5,flexDirection:'row',gap:8}}>
         {/* Gauge */}
-        <Card style={{flex:1.2,minWidth:130,maxWidth:200,padding:10,alignItems:'center',justifyContent:'center'}}>
+        <Card style={{flex:1.2,minWidth:sc(110),maxWidth:sc(200),padding:10,alignItems:'center',justifyContent:'center'}}>
           <ChartBox2>{(cw,ch)=>{
             const size=Math.min(cw,ch/0.72)*0.98;
             return(
@@ -454,17 +456,17 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
         </Card>
 
         {/* CPI / SPI stacked */}
-        <View style={{width:140,gap:8}}>
+        <View style={{width:sc(140),gap:8}}>
           <Card style={{flex:1,alignItems:'center',justifyContent:'center',gap:1,
             backgroundColor:cpi>=1?D.greenDim:D.redDim,borderColor:cpi>=1?D.green:D.red}}>
             <Text style={{fontSize:9,color:D.sub,letterSpacing:1.5}}>CPI</Text>
-            <Text style={{fontSize:30,fontWeight:'900',color:iCol(D,cpi),lineHeight:32}}>{cpi.toFixed(2)}</Text>
+            <Text style={{fontSize:sc(30),fontWeight:'900',color:iCol(D,cpi),lineHeight:sc(32)}}>{cpi.toFixed(2)}</Text>
             <Text style={{fontSize:9,color:iCol(D,cpi),fontWeight:'700'}}>{cpi>=1?'ON BUDGET':'OVER BUDGET'}</Text>
           </Card>
           <Card style={{flex:1,alignItems:'center',justifyContent:'center',gap:1,
             backgroundColor:spi>=1?D.greenDim:D.redDim,borderColor:spi>=1?D.green:D.red}}>
             <Text style={{fontSize:9,color:D.sub,letterSpacing:1.5}}>SPI</Text>
-            <Text style={{fontSize:30,fontWeight:'900',color:iCol(D,spi),lineHeight:32}}>{spi.toFixed(2)}</Text>
+            <Text style={{fontSize:sc(30),fontWeight:'900',color:iCol(D,spi),lineHeight:sc(32)}}>{spi.toFixed(2)}</Text>
             <Text style={{fontSize:9,color:iCol(D,spi),fontWeight:'700'}}>{spi>=1?'ON SCHEDULE':'BEHIND'}</Text>
           </Card>
         </View>
@@ -486,7 +488,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
           <View style={{flex:1,flexDirection:'row',gap:12,alignItems:'center'}}>
             {/* Donut */}
             <View style={{alignItems:'center',gap:4}}>
-              <Donut slices={[{v:activeW,c:D.green},{v:workers.length-activeW,c:D.muted}]} size={110} label={String(activeW)} sublabel="active"/>
+              <Donut slices={[{v:activeW,c:D.green},{v:workers.length-activeW,c:D.muted}]} size={sc(110)} label={String(activeW)} sublabel="active"/>
               <Text style={{fontSize:9,color:D.muted}}>of {workers.length}</Text>
             </View>
             {/* Dept bars */}
@@ -565,43 +567,14 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
         </>}
       </View>
 
-      {/* ══ ROW 3: Issues + Budget Pie + Daily Reports ══ */}
+      {/* ══ ROW 3: Budget by Category ══ */}
       <View style={{flex:4,flexDirection:'row',gap:8}}>
-
-        {/* Issues */}
-        <Card style={{flex:2,padding:12,gap:8}}>
-          <SH label="Issues" color={D.red}/>
-          <View style={{flex:1,flexDirection:'row',gap:14,alignItems:'center'}}>
-            <Donut slices={[
-              {v:issues.filter(i=>i.status==='Open'&&i.priority==='High').length,c:D.red},
-              {v:issues.filter(i=>i.status==='Open'&&i.priority==='Medium').length,c:D.yellow},
-              {v:issues.filter(i=>i.status==='Open'&&i.priority==='Low').length,c:D.blue},
-              {v:issues.filter(i=>i.status!=='Open').length,c:D.green},
-            ]} size={110} label={String(openIss)} sublabel="open"/>
-            <View style={{flex:1,gap:7}}>
-              {[{l:'High',c:D.red},{l:'Medium',c:D.yellow},{l:'Low',c:D.blue},{l:'Resolved',c:D.green}].map(row=>{
-                const cnt=row.l==='Resolved'?issues.filter(i=>i.status!=='Open').length:issues.filter(i=>i.status==='Open'&&i.priority===row.l).length;
-                return(
-                  <View key={row.l} style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-                    <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
-                      <View style={{width:9,height:9,borderRadius:4.5,backgroundColor:row.c}}/>
-                      <Text style={{fontSize:13,color:D.sub}}>{row.l}</Text>
-                    </View>
-                    <Text style={{fontSize:16,color:row.c,fontWeight:'800'}}>{cnt}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        </Card>
-
-        {/* Budget by Category — Pie */}
-        <Card style={{flex:2.5,padding:12,gap:8}}>
+        <Card style={{flex:1,padding:12,gap:8}}>
           <SH label="Budget by Category" color={D.orange}/>
           <View style={{flex:1,flexDirection:'row',gap:12,alignItems:'center'}}>
             <Donut
               slices={catData.map((c,i)=>({v:c.ac,c:DC[i%7]}))}
-              size={120}
+              size={sc(120)}
               label={fmtM(catData.reduce((s,c)=>s+c.ac,0))}
               sublabel="actual"
             />
@@ -614,41 +587,6 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
             </View>
           </View>
         </Card>
-
-        {/* Schedule status mini summary */}
-        <Card style={{flex:1.5,padding:12,gap:8}}>
-          <SH label="Schedule Status" color={D.green}/>
-          <View style={{flex:1,alignItems:'center',justifyContent:'center',gap:8}}>
-            <Donut
-              slices={[
-                {v:msDone,  c:D.green},
-                {v:msInP,   c:D.blue},
-                {v:msDel,   c:D.red},
-                {v:Math.max(0,schedule.length-msDone-msInP-msDel), c:D.muted},
-              ]}
-              size={110}
-              label={`${msDone}/${schedule.length}`}
-              sublabel="done"
-            />
-            <View style={{gap:5,alignSelf:'stretch'}}>
-              {[
-                {l:'Done',      v:msDone, c:D.green},
-                {l:'In Progress',v:msInP,  c:D.blue},
-                {l:'Delayed',   v:msDel,  c:D.red},
-                {l:'Pending',   v:Math.max(0,schedule.length-msDone-msInP-msDel), c:D.muted},
-              ].map(row=>(
-                <View key={row.l} style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-                  <View style={{flexDirection:'row',alignItems:'center',gap:5}}>
-                    <View style={{width:7,height:7,borderRadius:3.5,backgroundColor:row.c}}/>
-                    <Text style={{fontSize:11,color:D.sub}}>{row.l}</Text>
-                  </View>
-                  <Text style={{fontSize:13,fontWeight:'800',color:row.c}}>{row.v}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </Card>
-
       </View>
 
     </View>
@@ -733,8 +671,6 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
             {l:'Spent',    v:fmtM(spent),           c:bCol,  s:fmtP(bPct)+' used'},
             {l:'CPI',      v:cpi.toFixed(2),        c:iCol(D,cpi), s:cpi>=1?'On budget':'Over budget'},
             {l:'SPI',      v:spi.toFixed(2),        c:iCol(D,spi), s:spi>=1?'On schedule':'Behind'},
-            {l:'Workers',  v:String(activeW),       c:D.cyan,    s:`of ${workers.length}`},
-            {l:'Issues',   v:String(openIss),       c:openIss>0?D.yellow:D.green, s:`${highIss} critical`},
           ].map(kpi=>(
             <View key={kpi.l} style={{flex:1,backgroundColor:D.bg,borderRadius:8,borderWidth:1,borderColor:D.border,padding:10,alignItems:'center'}}>
               <Text style={{fontSize:9,color:D.muted,letterSpacing:1.5,textTransform:'uppercase',marginBottom:2}}>{kpi.l}</Text>
@@ -909,57 +845,7 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
         </View>
       )}
 
-      {/* ══ ROW 5: Issues ══ */}
-      {issues.length>0&&(
-        <View style={{flexDirection:isNarrow?'column':'row',gap:14}}>
-          <Card style={{flex:1,minWidth:160,maxWidth:240,padding:16,gap:12}}>
-            <SH label="Issues" color={D.red}/>
-            <View style={{alignItems:'center'}}>
-              <Donut slices={[
-                {v:issues.filter(i=>i.status==='Open'&&i.priority==='High').length,c:D.red},
-                {v:issues.filter(i=>i.status==='Open'&&i.priority==='Medium').length,c:D.yellow},
-                {v:issues.filter(i=>i.status==='Open'&&i.priority==='Low').length,c:D.blue},
-                {v:issues.filter(i=>i.status!=='Open').length,c:D.green},
-              ]} size={120} label={String(openIss)} sublabel="open"/>
-            </View>
-            <View style={{gap:6}}>
-              {[{l:'High',c:D.red},{l:'Medium',c:D.yellow},{l:'Low',c:D.blue},{l:'Resolved',c:D.green}].map(row=>{
-                const cnt=row.l==='Resolved'?issues.filter(i=>i.status!=='Open').length:issues.filter(i=>i.status==='Open'&&i.priority===row.l).length;
-                return(
-                  <View key={row.l} style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-                    <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
-                      <View style={{width:8,height:8,borderRadius:4,backgroundColor:row.c}}/>
-                      <Text style={{fontSize:12,color:D.sub}}>{row.l}</Text>
-                    </View>
-                    <Text style={{fontSize:14,color:row.c,fontWeight:'800'}}>{cnt}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </Card>
-          <Card style={{flex:1,padding:16,gap:6}}>
-            <SH label="Open Issues" color={D.red}/>
-            {issues.filter(i=>i.status==='Open').length===0
-              ?<View style={{flex:1,alignItems:'center',justifyContent:'center',padding:20}}>
-                  <Text style={{fontSize:14,color:D.green,fontWeight:'700'}}>✓ No open issues</Text>
-                </View>
-              :issues.filter(i=>i.status==='Open').slice(0,10).map((iss,i)=>{
-                const pc=iss.priority==='High'?D.red:iss.priority==='Medium'?D.yellow:D.blue;
-                return(
-                  <View key={i} style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:8,borderBottomWidth:1,borderBottomColor:D.border}}>
-                    <View style={{paddingHorizontal:7,paddingVertical:2,backgroundColor:pc+'18',borderWidth:1,borderColor:pc,borderRadius:4}}>
-                      <Text style={{fontSize:9,color:pc,fontWeight:'800',letterSpacing:1}}>{iss.priority?.toUpperCase()??'—'}</Text>
-                    </View>
-                    <Text style={{flex:1,fontSize:12,color:D.text}} numberOfLines={1}>{iss.title}</Text>
-                    {iss.assigned_to&&<Text style={{fontSize:10,color:D.sub}}>{iss.assigned_to}</Text>}
-                    {iss.due_date&&<Text style={{fontSize:10,color:D.muted}}>{iss.due_date}</Text>}
-                  </View>
-                );
-              })
-            }
-          </Card>
-        </View>
-      )}
+
 
     </View>
   );

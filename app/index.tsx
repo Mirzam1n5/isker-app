@@ -251,7 +251,49 @@ function BarChart({bars,w,h,grouped}:{bars:{label:string;v:number;v2?:number;col
 }
 
 // ── HBar ──────────────────────────────────────────────────────────
-function HBar({label,v,max,color,sub,rank,compact}:{label:string;v:number;max:number;color:string;sub?:string;rank?:number;compact?:boolean}) {
+// Grouped column chart — Planned vs Actual per category
+function BudgetColumns({data,w,h}:{data:{cat:string;pl:number;ac:number}[];w:number;h:number}) {
+  const {D} = useTheme();
+  if(!data.length) return null;
+  const max = Math.max(...data.map(d=>Math.max(d.pl,d.ac)), 1);
+  const padT=28, padB=26, padH=10;
+  const cw=w-padH*2, ch=h-padT-padB;
+  const groupW = cw/data.length;
+  const barW = Math.min(56, groupW*0.36);
+  const gap = barW*0.2;
+
+  return(
+    <Svg width={w} height={h}>
+      <Line x1={padH} y1={padT+ch} x2={w-padH} y2={padT+ch} stroke={D.border} strokeWidth={1}/>
+      {data.map((d,i)=>{
+        const cx = padH + groupW*i + groupW/2;
+        const plH = Math.max(2,(d.pl/max)*ch);
+        const acH = Math.max(2,(d.ac/max)*ch);
+        const over = d.ac>d.pl;
+        const plX = cx-barW-gap/2;
+        const acX = cx+gap/2;
+        return(
+          <G key={d.cat}>
+            {/* Planned bar */}
+            <Rect x={plX} y={padT+ch-plH} width={barW} height={plH} fill={D.muted} rx={2} opacity={0.55}/>
+            {/* Actual bar */}
+            <Rect x={acX} y={padT+ch-acH} width={barW} height={acH} fill={over?D.red:D.green} rx={2}/>
+            {/* Value label above the taller bar */}
+            <ST x={cx} y={padT+ch-Math.max(plH,acH)-7} textAnchor="middle" fontSize={11} fill={over?D.red:D.text} fontWeight="700">
+              {fmtM(d.ac)}
+            </ST>
+            {/* Category label */}
+            <ST x={cx} y={h-8} textAnchor="middle" fontSize={11} fill={D.sub} fontWeight="600">
+              {d.cat.length>9?d.cat.slice(0,8)+'…':d.cat}
+            </ST>
+          </G>
+        );
+      })}
+    </Svg>
+  );
+}
+
+
   const {D} = useTheme();
   const pct=max>0?(v/max)*100:0;
   const py=compact?2:5;
@@ -362,6 +404,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
   // Scale everything proportionally to viewport
   const scale = Math.min(W/1440, H/900);
   const sc = (base:number) => Math.max(Math.round(base*scale), Math.round(base*0.55));
+  const [chartW,setChartW] = useState(0);
 
   const workers  = data.workers.filter(w=>w.project_id===p.project_id);
   const evm      = data.evm.filter(e=>e.project_id===p.project_id);
@@ -568,22 +611,22 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
 
       {/* ══ ROW 3: Budget by Category ══ */}
       <View style={{flex:4,flexDirection:'row',gap:8}}>
-        <Card style={{flex:1,padding:12,gap:8}}>
-          <SH label="Budget by Category" color={D.orange}/>
-          <View style={{flex:1,flexDirection:'row',gap:12,alignItems:'center'}}>
-            <Donut
-              slices={catData.map((c,i)=>({v:c.ac,c:DC[i%7]}))}
-              size={sc(120)}
-              label={fmtM(catData.reduce((s,c)=>s+c.ac,0))}
-              sublabel="actual"
-            />
-            <View style={{flex:1,justifyContent:'center'}}>
-              {catData.map((c,i)=>{
-                const over=c.ac>c.pl;
-                const pct=c.pl>0?Math.round((c.ac/c.pl)*100):0;
-                return <HBar key={c.cat} label={c.cat} v={c.ac} max={catData[0]?.pl??1} color={over?D.red:DC[i%7]} sub={`${pct}%`} rank={i+1}/>;
-              })}
+        <Card style={{flex:1,padding:14,gap:8}}>
+          <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+            <SH label="Budget by Category" color={D.orange}/>
+            <View style={{flexDirection:'row',gap:14}}>
+              <View style={{flexDirection:'row',alignItems:'center',gap:5}}>
+                <View style={{width:10,height:10,borderRadius:2,backgroundColor:D.muted,opacity:0.55}}/>
+                <Text style={{fontSize:11,color:D.sub}}>Planned</Text>
+              </View>
+              <View style={{flexDirection:'row',alignItems:'center',gap:5}}>
+                <View style={{width:10,height:10,borderRadius:2,backgroundColor:D.green}}/>
+                <Text style={{fontSize:11,color:D.sub}}>Actual</Text>
+              </View>
             </View>
+          </View>
+          <View style={{flex:1}} onLayout={e=>setChartW(e.nativeEvent.layout.width)}>
+            {chartW>0&&<BudgetColumns data={catData} w={chartW} h={sc(220)}/>}
           </View>
         </Card>
       </View>

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, G, Text as ST, Line, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useSheetData, SheetData, Project, Worker, BudgetRow, Milestone, EvmRow, Issue } from '../hooks/useSheetData';
 import { getJSON, setJSON } from '../hooks/useStorage';
+import { SHEET_ID as DEFAULT_SHEET_ID } from '../constants';
 
 // ── Theme palettes ──────────────────────────────────────────────────
 const LIGHT = {
@@ -251,72 +252,17 @@ function BarChart({bars,w,h,grouped}:{bars:{label:string;v:number;v2?:number;col
 }
 
 // ── HBar ──────────────────────────────────────────────────────────
-// Grouped column chart — Planned vs Actual per category
-function BudgetColumns({data,w,h}:{data:{cat:string;pl:number;ac:number}[];w:number;h:number}) {
-  const {D} = useTheme();
-  if(!data.length) return null;
-  const max = Math.max(...data.map(d=>Math.max(d.pl,d.ac)), 1);
-  const padT=26, padB=24, padH=10;
-  const cw=w-padH*2, ch=h-padT-padB;
-  // Cap how wide a single group can get so categories don't sprawl
-  // across a near-empty chart — center the actually-used width instead.
-  const maxGroupW = 150;
-  const rawGroupW = cw/data.length;
-  const groupW = Math.min(rawGroupW, maxGroupW);
-  const usedW = groupW*data.length;
-  const offsetX = padH + Math.max(0,(cw-usedW)/2);
-  const barW = Math.min(40, groupW*0.34);
-  const gap = barW*0.22;
-
-  return(
-    <Svg width={w} height={h}>
-      <Line x1={padH} y1={padT+ch} x2={w-padH} y2={padT+ch} stroke={D.border} strokeWidth={1}/>
-      {data.map((d,i)=>{
-        const cx = offsetX + groupW*i + groupW/2;
-        const plH = Math.max(2,(d.pl/max)*ch);
-        const acH = Math.max(2,(d.ac/max)*ch);
-        const over = d.ac>d.pl;
-        const plX = cx-barW-gap/2;
-        const acX = cx+gap/2;
-        return(
-          <G key={d.cat}>
-            {/* Planned bar */}
-            <Rect x={plX} y={padT+ch-plH} width={barW} height={plH} fill={D.muted} rx={2} opacity={0.55}/>
-            {/* Actual bar */}
-            <Rect x={acX} y={padT+ch-acH} width={barW} height={acH} fill={over?D.red:D.green} rx={2}/>
-            {/* Value label above the taller bar */}
-            <ST x={cx} y={padT+ch-Math.max(plH,acH)-6} textAnchor="middle" fontSize={10} fill={over?D.red:D.text} fontWeight="700">
-              {fmtM(d.ac)}
-            </ST>
-            {/* Category label */}
-            <ST x={cx} y={h-7} textAnchor="middle" fontSize={10} fill={D.sub} fontWeight="600">
-              {d.cat.length>9?d.cat.slice(0,8)+'…':d.cat}
-            </ST>
-          </G>
-        );
-      })}
-    </Svg>
-  );
-}
-
-function HBar({label,v,max,color,sub,rank,compact}:{label:string;v:number;max:number;color:string;sub?:string;rank?:number;compact?:boolean}) {
+function HBar({label,v,max,color,sub}:{label:string;v:number;max:number;color:string;sub?:string}) {
   const {D} = useTheme();
   const pct=max>0?(v/max)*100:0;
-  const py=compact?2:5;
-  const fs=compact?12:14;
-  const fv=compact?13:15;
-  const bh=compact?6:9;
   return (
-    <View style={{flexDirection:'row',alignItems:'center',gap:6,paddingVertical:py,borderBottomWidth:1,borderBottomColor:D.border}}>
-      {rank!=null&&<Text style={{fontSize:11,color:D.muted,fontWeight:'700',width:14,textAlign:'right'}}>{rank}</Text>}
-      <View style={{flex:1,gap:compact?2:4}}>
-        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-          <Text style={{fontSize:fs,color:D.text,fontWeight:'600',flex:1}} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{label}</Text>
-          <Text style={{fontSize:fv,color,fontWeight:'800',marginLeft:6}} adjustsFontSizeToFit numberOfLines={1} minimumFontScale={0.6}>{sub??v}</Text>
-        </View>
-        <View style={{height:bh,backgroundColor:D.border,borderRadius:2}}>
-          <View style={{height:bh,width:`${Math.min(pct,100)}%` as any,backgroundColor:color,borderRadius:2}}/>
-        </View>
+    <View style={{gap:3}}>
+      <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+        <Text style={{fontSize:12,color:D.text,flex:1}} numberOfLines={1}>{label}</Text>
+        <Text style={{fontSize:12,color,fontWeight:'700',marginLeft:8}}>{sub??v}</Text>
+      </View>
+      <View style={{height:7,backgroundColor:D.border,borderRadius:4}}>
+        <View style={{height:7,width:`${Math.min(pct,100)}%` as any,backgroundColor:color,borderRadius:4}}/>
       </View>
     </View>
   );
@@ -406,11 +352,6 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
   const {D} = useTheme();
   const PC = getPC(D);
   const DC = getDC(D);
-  const {width:W, height:H} = useWindowDimensions();
-  // Scale everything proportionally to viewport
-  const scale = Math.min(W/1440, H/900);
-  const sc = (base:number) => Math.max(Math.round(base*scale), Math.round(base*0.55));
-  const [chartW,setChartW] = useState(0);
 
   const workers  = data.workers.filter(w=>w.project_id===p.project_id);
   const evm      = data.evm.filter(e=>e.project_id===p.project_id);
@@ -471,7 +412,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
           <Text style={{fontSize:18,color:D.text,fontWeight:'900'}}>{p.project_name}</Text>
           <Text style={{fontSize:10,color:D.sub}}>{p.client} · {p.location}</Text>
         </View>
-        <Text style={{fontSize:sc(34),fontWeight:'900',color,marginLeft:'auto' as any}}>{fmtP(prog)}</Text>
+        <Text style={{fontSize:34,fontWeight:'900',color,marginLeft:'auto' as any}}>{fmtP(prog)}</Text>
         <View style={{width:1,height:36,backgroundColor:D.border}}/>
         <View style={{flexDirection:'row',gap:8,flex:1,justifyContent:'flex-end'}}>
           {[
@@ -479,10 +420,12 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
             {l:'Spent',v:fmtM(spent),c:bCol,s:fmtP(bPct)},
             {l:'CPI',v:cpi.toFixed(2),c:iCol(D,cpi)},
             {l:'SPI',v:spi.toFixed(2),c:iCol(D,spi)},
+            {l:'Workers',v:`${activeW}/${workers.length}`,c:D.cyan},
+            {l:'Issues',v:String(openIss),c:openIss>0?D.yellow:D.green,s:`${highIss} crit.`},
           ].map(kpi=>(
-            <View key={kpi.l} style={{backgroundColor:D.bg,borderRadius:6,borderWidth:1,borderColor:D.border,paddingHorizontal:sc(10),paddingVertical:4,alignItems:'center',minWidth:sc(64)}}>
-              <Text style={{fontSize:sc(8),color:D.muted,letterSpacing:1,textTransform:'uppercase'}}>{kpi.l}</Text>
-              <Text style={{fontSize:sc(15),fontWeight:'900',color:kpi.c,lineHeight:sc(17)}}>{kpi.v}</Text>
+            <View key={kpi.l} style={{backgroundColor:D.bg,borderRadius:6,borderWidth:1,borderColor:D.border,paddingHorizontal:10,paddingVertical:4,alignItems:'center',minWidth:64}}>
+              <Text style={{fontSize:8,color:D.muted,letterSpacing:1,textTransform:'uppercase'}}>{kpi.l}</Text>
+              <Text style={{fontSize:15,fontWeight:'900',color:kpi.c,lineHeight:17}}>{kpi.v}</Text>
               {kpi.s&&<Text style={{fontSize:8,color:D.muted}}>{kpi.s}</Text>}
             </View>
           ))}
@@ -492,7 +435,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
       {/* ══ ROW 1: Gauge | CPI/SPI | Manpower | Milestones ══ */}
       <View style={{flex:5,flexDirection:'row',gap:8}}>
         {/* Gauge */}
-        <Card style={{flex:1.2,minWidth:sc(110),maxWidth:sc(200),padding:10,alignItems:'center',justifyContent:'center'}}>
+        <Card style={{flex:1.2,minWidth:130,maxWidth:200,padding:10,alignItems:'center',justifyContent:'center'}}>
           <ChartBox2>{(cw,ch)=>{
             const size=Math.min(cw,ch/0.72)*0.98;
             return(
@@ -504,17 +447,17 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
         </Card>
 
         {/* CPI / SPI stacked */}
-        <View style={{width:sc(140),gap:8}}>
+        <View style={{width:140,gap:8}}>
           <Card style={{flex:1,alignItems:'center',justifyContent:'center',gap:1,
             backgroundColor:cpi>=1?D.greenDim:D.redDim,borderColor:cpi>=1?D.green:D.red}}>
             <Text style={{fontSize:9,color:D.sub,letterSpacing:1.5}}>CPI</Text>
-            <Text style={{fontSize:sc(30),fontWeight:'900',color:iCol(D,cpi),lineHeight:sc(32)}}>{cpi.toFixed(2)}</Text>
+            <Text style={{fontSize:30,fontWeight:'900',color:iCol(D,cpi),lineHeight:32}}>{cpi.toFixed(2)}</Text>
             <Text style={{fontSize:9,color:iCol(D,cpi),fontWeight:'700'}}>{cpi>=1?'ON BUDGET':'OVER BUDGET'}</Text>
           </Card>
           <Card style={{flex:1,alignItems:'center',justifyContent:'center',gap:1,
             backgroundColor:spi>=1?D.greenDim:D.redDim,borderColor:spi>=1?D.green:D.red}}>
             <Text style={{fontSize:9,color:D.sub,letterSpacing:1.5}}>SPI</Text>
-            <Text style={{fontSize:sc(30),fontWeight:'900',color:iCol(D,spi),lineHeight:sc(32)}}>{spi.toFixed(2)}</Text>
+            <Text style={{fontSize:30,fontWeight:'900',color:iCol(D,spi),lineHeight:32}}>{spi.toFixed(2)}</Text>
             <Text style={{fontSize:9,color:iCol(D,spi),fontWeight:'700'}}>{spi>=1?'ON SCHEDULE':'BEHIND'}</Text>
           </Card>
         </View>
@@ -536,25 +479,35 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
           <View style={{flex:1,flexDirection:'row',gap:12,alignItems:'center'}}>
             {/* Donut */}
             <View style={{alignItems:'center',gap:4}}>
-              <Donut slices={[{v:activeW,c:D.green},{v:workers.length-activeW,c:D.muted}]} size={sc(110)} label={String(activeW)} sublabel="active"/>
+              <Donut slices={[{v:activeW,c:D.green},{v:workers.length-activeW,c:D.muted}]} size={80} label={String(activeW)} sublabel="active"/>
               <Text style={{fontSize:9,color:D.muted}}>of {workers.length}</Text>
             </View>
             {/* Dept bars */}
             <View style={{flex:1,gap:4}}>
               {depts.slice(0,5).map((d,i)=>(
-                <HBar key={d[0]} label={d[0]} v={d[1]} max={depts[0][1]} color={DC[i%7]} sub={String(d[1])} rank={i+1}/>
+                <HBar key={d[0]} label={d[0]} v={d[1]} max={depts[0][1]} color={DC[i%7]} sub={String(d[1])}/>
               ))}
             </View>
             {/* Divider */}
             <View style={{width:1,height:'100%' as any,backgroundColor:D.border}}/>
             {/* Phase progress */}
-            <View style={{flex:1,gap:0,overflow:'hidden'}}>
-              {phases.map((phase,i)=>{
+            <View style={{flex:1,gap:4}}>
+              {phases.map(phase=>{
                 const phMs=schedule.filter(m=>m.phase===phase);
                 const phDone=phMs.filter(m=>m.status==='Done').length;
                 const phPct=phMs.length>0?(phDone/phMs.length)*100:0;
                 const phCol=phPct===100?D.green:phMs.some(m=>m.status==='Delayed')?D.red:D.blue;
-                return <HBar key={phase} label={phase} v={phPct} max={100} color={phCol} sub={fmtP(phPct)} rank={i+1} compact/>;
+                return(
+                  <View key={phase} style={{gap:2}}>
+                    <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+                      <Text style={{fontSize:10,color:D.text}}>{phase}</Text>
+                      <Text style={{fontSize:10,color:phCol,fontWeight:'700'}}>{fmtP(phPct)}</Text>
+                    </View>
+                    <View style={{height:6,backgroundColor:D.bg,borderRadius:3}}>
+                      <View style={{height:6,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:3}}/>
+                    </View>
+                  </View>
+                );
               })}
               <View style={{backgroundColor:spi>=1?D.greenDim:D.redDim,borderWidth:1,
                 borderColor:spi>=1?D.green:D.red,padding:5,borderRadius:5,
@@ -578,7 +531,27 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
           }
           <Legend items={[{label:'Planned',color:D.blue},{label:'Actual',color:D.orange}]}/>
         </Card>
-
+        <Card style={{flex:2,padding:12,gap:6}}>
+          <SH label="By Category" color={D.orange}/>
+          <View style={{flex:1,gap:8,justifyContent:'center'}}>
+            {catData.map(c=>{
+              const max=catData[0]?.pl??1,over=c.ac>c.pl;
+              return(
+                <View key={c.cat} style={{gap:2}}>
+                  <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+                    <Text style={{fontSize:11,color:D.text,flex:1}} numberOfLines={1}>{c.cat}</Text>
+                    <Text style={{fontSize:11,color:over?D.red:D.green,fontWeight:'700'}}>{fmtM(c.ac)}</Text>
+                  </View>
+                  <View style={{height:8,backgroundColor:D.bg,borderRadius:4,overflow:'hidden'}}>
+                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.pl/max)*100}%` as any,backgroundColor:D.blue,opacity:0.25,borderRadius:4}}/>
+                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.ac/max)*100}%` as any,backgroundColor:over?D.red:D.green,opacity:0.85,borderRadius:4}}/>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+          <Legend items={[{label:'Planned',color:D.blue},{label:'Actual',color:D.green}]}/>
+        </Card>
         {evm.length>=2&&<>
           <Card style={{flex:3,padding:12,gap:6}}>
             <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
@@ -615,26 +588,104 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
         </>}
       </View>
 
-      {/* ══ ROW 3: Budget by Category ══ */}
-      <View style={{flex:2.6,flexDirection:'row',gap:8}}>
-        <Card style={{flex:1,padding:14,gap:8}}>
-          <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-            <SH label="Budget by Category" color={D.orange}/>
-            <View style={{flexDirection:'row',gap:14}}>
-              <View style={{flexDirection:'row',alignItems:'center',gap:5}}>
-                <View style={{width:10,height:10,borderRadius:2,backgroundColor:D.muted,opacity:0.55}}/>
-                <Text style={{fontSize:11,color:D.sub}}>Planned</Text>
-              </View>
-              <View style={{flexDirection:'row',alignItems:'center',gap:5}}>
-                <View style={{width:10,height:10,borderRadius:2,backgroundColor:D.green}}/>
-                <Text style={{fontSize:11,color:D.sub}}>Actual</Text>
-              </View>
+      {/* ══ ROW 3: Issues + Budget Pie + Daily Reports ══ */}
+      <View style={{flex:4,flexDirection:'row',gap:8}}>
+
+        {/* Issues */}
+        <Card style={{flex:2,padding:12,gap:8}}>
+          <SH label="Issues" color={D.red}/>
+          <View style={{flex:1,flexDirection:'row',gap:14,alignItems:'center'}}>
+            <Donut slices={[
+              {v:issues.filter(i=>i.status==='Open'&&i.priority==='High').length,c:D.red},
+              {v:issues.filter(i=>i.status==='Open'&&i.priority==='Medium').length,c:D.yellow},
+              {v:issues.filter(i=>i.status==='Open'&&i.priority==='Low').length,c:D.blue},
+              {v:issues.filter(i=>i.status!=='Open').length,c:D.green},
+            ]} size={84} label={String(openIss)} sublabel="open"/>
+            <View style={{flex:1,gap:7}}>
+              {[{l:'High',c:D.red},{l:'Medium',c:D.yellow},{l:'Low',c:D.blue},{l:'Resolved',c:D.green}].map(row=>{
+                const cnt=row.l==='Resolved'?issues.filter(i=>i.status!=='Open').length:issues.filter(i=>i.status==='Open'&&i.priority===row.l).length;
+                return(
+                  <View key={row.l} style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+                    <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
+                      <View style={{width:9,height:9,borderRadius:4.5,backgroundColor:row.c}}/>
+                      <Text style={{fontSize:13,color:D.sub}}>{row.l}</Text>
+                    </View>
+                    <Text style={{fontSize:16,color:row.c,fontWeight:'800'}}>{cnt}</Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
-          <View style={{flex:1,alignItems:'center',justifyContent:'center'}} onLayout={e=>setChartW(e.nativeEvent.layout.width)}>
-            {chartW>0&&<BudgetColumns data={catData} w={chartW} h={Math.min(sc(160), chartW*0.28)}/>}
+        </Card>
+
+        {/* Budget by Category — Pie */}
+        <Card style={{flex:2.5,padding:12,gap:8}}>
+          <SH label="Budget by Category" color={D.orange}/>
+          <View style={{flex:1,flexDirection:'row',gap:12,alignItems:'center'}}>
+            <Donut
+              slices={catData.map((c,i)=>({v:c.ac,c:DC[i%7]}))}
+              size={88}
+              label={fmtM(catData.reduce((s,c)=>s+c.ac,0))}
+              sublabel="actual"
+            />
+            <View style={{flex:1,gap:5}}>
+              {catData.map((c,i)=>{
+                const over=c.ac>c.pl;
+                const pct=c.pl>0?Math.round((c.ac/c.pl)*100):0;
+                return(
+                  <View key={c.cat} style={{gap:2}}>
+                    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+                      <View style={{flexDirection:'row',alignItems:'center',gap:5,flex:1}}>
+                        <View style={{width:8,height:8,borderRadius:4,backgroundColor:DC[i%7]}}/>
+                        <Text style={{fontSize:11,color:D.text,flex:1}} numberOfLines={1}>{c.cat}</Text>
+                      </View>
+                      <Text style={{fontSize:11,fontWeight:'800',color:over?D.red:D.green,marginLeft:6}}>{pct}%</Text>
+                    </View>
+                    <View style={{height:4,backgroundColor:D.bg,borderRadius:2,overflow:'hidden'}}>
+                      <View style={{position:'absolute',top:0,left:0,height:4,width:`${Math.min((c.pl/catData[0].pl)*100,100)}%` as any,backgroundColor:DC[i%7],opacity:0.25,borderRadius:2}}/>
+                      <View style={{position:'absolute',top:0,left:0,height:4,width:`${Math.min((c.ac/catData[0].pl)*100,100)}%` as any,backgroundColor:over?D.red:DC[i%7],borderRadius:2}}/>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         </Card>
+
+        {/* Schedule status mini summary */}
+        <Card style={{flex:1.5,padding:12,gap:8}}>
+          <SH label="Schedule Status" color={D.green}/>
+          <View style={{flex:1,alignItems:'center',justifyContent:'center',gap:8}}>
+            <Donut
+              slices={[
+                {v:msDone,  c:D.green},
+                {v:msInP,   c:D.blue},
+                {v:msDel,   c:D.red},
+                {v:Math.max(0,schedule.length-msDone-msInP-msDel), c:D.muted},
+              ]}
+              size={80}
+              label={`${msDone}/${schedule.length}`}
+              sublabel="done"
+            />
+            <View style={{gap:5,alignSelf:'stretch'}}>
+              {[
+                {l:'Done',      v:msDone, c:D.green},
+                {l:'In Progress',v:msInP,  c:D.blue},
+                {l:'Delayed',   v:msDel,  c:D.red},
+                {l:'Pending',   v:Math.max(0,schedule.length-msDone-msInP-msDel), c:D.muted},
+              ].map(row=>(
+                <View key={row.l} style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+                  <View style={{flexDirection:'row',alignItems:'center',gap:5}}>
+                    <View style={{width:7,height:7,borderRadius:3.5,backgroundColor:row.c}}/>
+                    <Text style={{fontSize:11,color:D.sub}}>{row.l}</Text>
+                  </View>
+                  <Text style={{fontSize:13,fontWeight:'800',color:row.c}}>{row.v}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </Card>
+
       </View>
 
     </View>
@@ -719,6 +770,8 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
             {l:'Spent',    v:fmtM(spent),           c:bCol,  s:fmtP(bPct)+' used'},
             {l:'CPI',      v:cpi.toFixed(2),        c:iCol(D,cpi), s:cpi>=1?'On budget':'Over budget'},
             {l:'SPI',      v:spi.toFixed(2),        c:iCol(D,spi), s:spi>=1?'On schedule':'Behind'},
+            {l:'Workers',  v:String(activeW),       c:D.cyan,    s:`of ${workers.length}`},
+            {l:'Issues',   v:String(openIss),       c:openIss>0?D.yellow:D.green, s:`${highIss} critical`},
           ].map(kpi=>(
             <View key={kpi.l} style={{flex:1,backgroundColor:D.bg,borderRadius:8,borderWidth:1,borderColor:D.border,padding:10,alignItems:'center'}}>
               <Text style={{fontSize:9,color:D.muted,letterSpacing:1.5,textTransform:'uppercase',marginBottom:2}}>{kpi.l}</Text>
@@ -782,7 +835,7 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
           <View style={{flexDirection:'row',gap:20}}>
             {/* Left: Donut + counts */}
             <View style={{alignItems:'center',gap:8}}>
-              <Donut slices={[{v:activeW,c:D.green},{v:workers.length-activeW,c:D.muted}]} size={120} label={String(activeW)} sublabel="active"/>
+              <Donut slices={[{v:activeW,c:D.green},{v:workers.length-activeW,c:D.muted}]} size={96} label={String(activeW)} sublabel="active"/>
               <View style={{flexDirection:'row',gap:10}}>
                 <View style={{alignItems:'center'}}>
                   <Text style={{fontSize:9,color:D.muted}}>TOTAL</Text>
@@ -810,12 +863,22 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
             {/* Right: Phase progress */}
             <View style={{flex:1,gap:6}}>
               <Text style={{fontSize:9,color:D.muted,letterSpacing:1.5,textTransform:'uppercase',marginBottom:2}}>Phase Progress</Text>
-              {phases.map((phase,i)=>{
+              {phases.map(phase=>{
                 const phMs=schedule.filter(m=>m.phase===phase);
                 const phDone=phMs.filter(m=>m.status==='Done').length;
                 const phPct=phMs.length>0?(phDone/phMs.length)*100:0;
                 const phCol=phPct===100?D.green:phMs.some(m=>m.status==='Delayed')?D.red:D.blue;
-                return <HBar key={phase} label={phase} v={phPct} max={100} color={phCol} sub={fmtP(phPct)} rank={i+1} compact/>;
+                return(
+                  <View key={phase} style={{gap:3}}>
+                    <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+                      <Text style={{fontSize:11,color:D.text}}>{phase}</Text>
+                      <Text style={{fontSize:11,color:phCol,fontWeight:'700'}}>{fmtP(phPct)}</Text>
+                    </View>
+                    <View style={{height:8,backgroundColor:D.bg,borderRadius:4}}>
+                      <View style={{height:8,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:4}}/>
+                    </View>
+                  </View>
+                );
               })}
               {/* SPI pill */}
               <View style={{backgroundColor:spi>=1?D.greenDim:D.redDim,borderWidth:1,
@@ -846,12 +909,24 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
         </Card>
         <Card style={{flex:3,padding:16,gap:10}}>
           <SH label="By Category" color={D.orange}/>
-          <View style={{gap:2}}>
-            {catData.map((c,i)=>{
+          <View style={{gap:9}}>
+            {catData.map(c=>{
               const max=catData[0]?.pl??1,over=c.ac>c.pl;
-              return <HBar key={c.cat} label={c.cat} v={c.ac} max={max} color={over?D.red:DC[i%7]} sub={fmtM(c.ac)} rank={i+1}/>;
+              return(
+                <View key={c.cat} style={{gap:3}}>
+                  <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+                    <Text style={{fontSize:12,color:D.text,flex:1}} numberOfLines={1}>{c.cat}</Text>
+                    <Text style={{fontSize:12,color:over?D.red:D.green,fontWeight:'700'}}>{fmtM(c.ac)}</Text>
+                  </View>
+                  <View style={{height:8,backgroundColor:D.bg,borderRadius:4,overflow:'hidden'}}>
+                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.pl/max)*100}%` as any,backgroundColor:D.blue,opacity:0.25,borderRadius:4}}/>
+                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.ac/max)*100}%` as any,backgroundColor:over?D.red:D.green,opacity:0.85,borderRadius:4}}/>
+                  </View>
+                </View>
+              );
             })}
           </View>
+          <Legend items={[{label:'Planned',color:D.blue},{label:'Actual',color:D.green}]}/>
         </Card>
       </View>
 
@@ -893,7 +968,57 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
         </View>
       )}
 
-
+      {/* ══ ROW 5: Issues ══ */}
+      {issues.length>0&&(
+        <View style={{flexDirection:isNarrow?'column':'row',gap:14}}>
+          <Card style={{flex:1,minWidth:160,maxWidth:240,padding:16,gap:12}}>
+            <SH label="Issues" color={D.red}/>
+            <View style={{alignItems:'center'}}>
+              <Donut slices={[
+                {v:issues.filter(i=>i.status==='Open'&&i.priority==='High').length,c:D.red},
+                {v:issues.filter(i=>i.status==='Open'&&i.priority==='Medium').length,c:D.yellow},
+                {v:issues.filter(i=>i.status==='Open'&&i.priority==='Low').length,c:D.blue},
+                {v:issues.filter(i=>i.status!=='Open').length,c:D.green},
+              ]} size={88} label={String(openIss)} sublabel="open"/>
+            </View>
+            <View style={{gap:6}}>
+              {[{l:'High',c:D.red},{l:'Medium',c:D.yellow},{l:'Low',c:D.blue},{l:'Resolved',c:D.green}].map(row=>{
+                const cnt=row.l==='Resolved'?issues.filter(i=>i.status!=='Open').length:issues.filter(i=>i.status==='Open'&&i.priority===row.l).length;
+                return(
+                  <View key={row.l} style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+                    <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
+                      <View style={{width:8,height:8,borderRadius:4,backgroundColor:row.c}}/>
+                      <Text style={{fontSize:12,color:D.sub}}>{row.l}</Text>
+                    </View>
+                    <Text style={{fontSize:14,color:row.c,fontWeight:'800'}}>{cnt}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Card>
+          <Card style={{flex:1,padding:16,gap:6}}>
+            <SH label="Open Issues" color={D.red}/>
+            {issues.filter(i=>i.status==='Open').length===0
+              ?<View style={{flex:1,alignItems:'center',justifyContent:'center',padding:20}}>
+                  <Text style={{fontSize:14,color:D.green,fontWeight:'700'}}>✓ No open issues</Text>
+                </View>
+              :issues.filter(i=>i.status==='Open').slice(0,10).map((iss,i)=>{
+                const pc=iss.priority==='High'?D.red:iss.priority==='Medium'?D.yellow:D.blue;
+                return(
+                  <View key={i} style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:8,borderBottomWidth:1,borderBottomColor:D.border}}>
+                    <View style={{paddingHorizontal:7,paddingVertical:2,backgroundColor:pc+'18',borderWidth:1,borderColor:pc,borderRadius:4}}>
+                      <Text style={{fontSize:9,color:pc,fontWeight:'800',letterSpacing:1}}>{iss.priority?.toUpperCase()??'—'}</Text>
+                    </View>
+                    <Text style={{flex:1,fontSize:12,color:D.text}} numberOfLines={1}>{iss.title}</Text>
+                    {iss.assigned_to&&<Text style={{fontSize:10,color:D.sub}}>{iss.assigned_to}</Text>}
+                    {iss.due_date&&<Text style={{fontSize:10,color:D.muted}}>{iss.due_date}</Text>}
+                  </View>
+                );
+              })
+            }
+          </Card>
+        </View>
+      )}
 
     </View>
   );
@@ -924,26 +1049,32 @@ interface SheetEntry { id: string; label: string; }
 const SHEETS_STORAGE_KEY = 'isker_extra_sheets';
 const THEME_STORAGE_KEY = 'isker_theme_dark';
 
-// Shared hook: extra sheets list, persisted via AsyncStorage so web and
-// mobile (iOS/Android/Expo Go) read and write the exact same data —
-// no more "two separate services" — both platforms sync through the
-// same storage key once the screen mounts.
+// Shared hook: extra sheets list, synced with server API so all users
+// see the same list. On startup, fetches from /api/sheets. When adding/removing,
+// calls the server API which persists to sheets.json.
 function useExtraSheets() {
   const [extraSheets, setExtraSheetsState] = useState<SheetEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
 
+  // Load from server on mount
   useEffect(() => {
     let mounted = true;
-    getJSON<SheetEntry[]>(SHEETS_STORAGE_KEY, []).then(saved => {
-      if (mounted) { setExtraSheetsState(saved); setLoaded(true); }
-    });
+    fetch('/api/sheets')
+      .then(r => r.json())
+      .then(data => {
+        if (mounted) { setExtraSheetsState(data); setLoaded(true); }
+      })
+      .catch(err => {
+        console.warn('Failed to load sheets from server:', err);
+        if (mounted) { setLoaded(true); } // fallback: show empty list
+      });
     return () => { mounted = false; };
   }, []);
 
   const setExtraSheets = useCallback((updater: SheetEntry[] | ((prev: SheetEntry[]) => SheetEntry[])) => {
     setExtraSheetsState(prev => {
       const next = typeof updater === 'function' ? (updater as any)(prev) : updater;
-      setJSON(SHEETS_STORAGE_KEY, next);
+      // Note: we don't persist here; the server does it when you call handleAddSheet/handleRemoveSheet
       return next;
     });
   }, []);
@@ -1010,36 +1141,6 @@ function ProjectTab({sheetId,color,tvMode}:{sheetId:string;color:string;tvMode:b
         <ProjectDashboard p={p} data={data} color={color}/>
       </View>
     </ScrollView>
-  );
-}
-
-// Confirm delete modal
-function ConfirmDeleteModal({label,onConfirm,onClose}:{label:string;onConfirm:()=>void;onClose:()=>void}) {
-  const {D} = useTheme();
-  return(
-    <View style={{position:'absolute',top:0,left:0,right:0,bottom:0,
-      backgroundColor:'rgba(0,0,0,0.45)',alignItems:'center',justifyContent:'center',zIndex:101} as any}>
-      <View style={{backgroundColor:D.panel,borderWidth:1,borderColor:D.border,borderRadius:12,
-        padding:26,width:400,gap:14,shadowColor:'#000',shadowOffset:{width:0,height:8},
-        shadowOpacity:0.2,shadowRadius:24,elevation:10}}>
-        <Text style={{fontSize:17,fontWeight:'900',color:D.text}}>Delete project?</Text>
-        <Text style={{fontSize:13,color:D.sub,lineHeight:19}}>
-          Are you sure you want to remove{' '}
-          <Text style={{color:D.text,fontWeight:'700'}}>"{label}"</Text>
-          {' '}from the dashboard? This only removes it from this view — the Google Sheet itself will not be affected.
-        </Text>
-        <View style={{flexDirection:'row',gap:10,marginTop:4}}>
-          <TouchableOpacity onPress={onClose}
-            style={{flex:1,paddingVertical:11,borderRadius:8,borderWidth:1,borderColor:D.border,alignItems:'center'}}>
-            <Text style={{fontSize:13,color:D.sub,fontWeight:'700'}}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onConfirm}
-            style={{flex:1,paddingVertical:11,borderRadius:8,backgroundColor:D.red,alignItems:'center'}}>
-            <Text style={{fontSize:13,color:'#fff',fontWeight:'800'}}>Delete</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
   );
 }
 
@@ -1111,43 +1212,57 @@ function AddProjectModal({onAdd,onClose}:{onAdd:(entry:SheetEntry)=>void;onClose
   );
 }
 
-function WebLayout() {
+function WebLayout({data,defaultSheetId}:{data:SheetData;defaultSheetId:string}) {
   const {D,isDark,toggleTheme} = useTheme();
   const PC = getPC(D);
   const [activeIdx,setActiveIdx]=useState(0);
   const [tvMode,setTvMode]=useState(false);
   const [showAdd,setShowAdd]=useState(false);
-  const [pendingDelete,setPendingDelete]=useState<number|null>(null);
-  const {extraSheets,setExtraSheets,loaded} = useExtraSheets();
+  const {extraSheets,setExtraSheets} = useExtraSheets();
 
-  // Every project the user sees comes purely from their saved sheet
-  // list (AsyncStorage). No sheet ID is baked into the source code —
-  // the dashboard starts empty until the user adds a project.
-  const allTabs = extraSheets;
+  // First tab = default sheet (from constants), rest = extra sheets
+  const defaultLabel = data.projects[0]?.project_name ?? 'Project 1';
+  const allTabs = [
+    {id:defaultSheetId, label:defaultLabel, isDefault:true},
+    ...extraSheets.map(e=>({...e, isDefault:false})),
+  ];
 
-  const handleAddSheet = (entry:SheetEntry) => {
-    setExtraSheets(prev => [...prev, entry]);
-    setActiveIdx(allTabs.length);
+  const handleAddSheet = async (entry:SheetEntry) => {
+    try {
+      const res = await fetch('/api/sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry),
+      });
+      if (res.ok) {
+        // Refresh from server to get latest list
+        const updated = await fetch('/api/sheets').then(r => r.json());
+        setExtraSheets(_ => updated);
+        setActiveIdx(1 + updated.length - 1); // switch to new tab
+      }
+    } catch (e) {
+      console.error('Failed to add sheet:', e);
+    }
   };
 
-  const requestRemoveSheet = (idx:number) => setPendingDelete(idx);
-
-  const confirmRemoveSheet = () => {
-    if(pendingDelete==null) return;
-    const idx = pendingDelete;
-    setExtraSheets(prev => prev.filter((_,i)=>i!==idx));
-    if(activeIdx>=idx) setActiveIdx(Math.max(0,activeIdx-1));
-    setPendingDelete(null);
+  const handleRemoveSheet = async (idx:number) => {
+    const sheetId = allTabs[idx]?.id;
+    if (!sheetId) return;
+    try {
+      const res = await fetch(`/api/sheets/${sheetId}`, { method: 'DELETE' });
+      if (res.ok) {
+        // Refresh from server
+        const updated = await fetch('/api/sheets').then(r => r.json());
+        setExtraSheets(_ => updated);
+        if(activeIdx>=allTabs.length-1) setActiveIdx(Math.max(0, allTabs.length-2));
+      }
+    } catch (e) {
+      console.error('Failed to remove sheet:', e);
+    }
   };
 
-  const activeTab = allTabs[activeIdx];
+  const activeTab = allTabs[activeIdx] ?? allTabs[0];
   const color = PC[activeIdx%3];
-
-  if(!loaded) return(
-    <View style={{flex:1,backgroundColor:D.bg,alignItems:'center',justifyContent:'center'}}>
-      <Text style={{color:D.muted,fontSize:13,letterSpacing:2}}>LOADING...</Text>
-    </View>
-  );
 
   return(
     <View style={{flex:1,backgroundColor:D.bg}}>
@@ -1172,9 +1287,9 @@ function WebLayout() {
                     <View style={{width:7,height:7,borderRadius:3.5,backgroundColor:on?col:D.muted}}/>
                     <Text style={{fontSize:tvMode?12:13,fontWeight:'800',letterSpacing:0.3,color:on?D.text:D.sub}}>{tab.label}</Text>
                   </TouchableOpacity>
-                  {/* Remove button — every tab is removable now */}
-                  {on&&(
-                    <TouchableOpacity onPress={()=>requestRemoveSheet(i)}
+                  {/* Remove button for extra sheets */}
+                  {!tab.isDefault&&on&&(
+                    <TouchableOpacity onPress={()=>handleRemoveSheet(i)}
                       style={{width:18,height:18,borderRadius:9,backgroundColor:D.redDim,
                         borderWidth:1,borderColor:D.red,alignItems:'center',justifyContent:'center',marginLeft:-4}}>
                       <Text style={{fontSize:11,color:D.red,fontWeight:'900',lineHeight:13}}>×</Text>
@@ -1216,29 +1331,26 @@ function WebLayout() {
       </View>
 
       {/* Dashboard content */}
-      {allTabs.length===0 ? (
-        <View style={{flex:1,alignItems:'center',justifyContent:'center',gap:14}}>
-          <Text style={{color:D.muted,fontSize:14}}>No projects yet.</Text>
-          <TouchableOpacity onPress={()=>setShowAdd(true)}
-            style={{paddingHorizontal:16,paddingVertical:10,backgroundColor:D.blue,borderRadius:8}}>
-            <Text style={{color:'#fff',fontSize:13,fontWeight:'800'}}>+ Add your first project</Text>
-          </TouchableOpacity>
-        </View>
-      ) : activeTab ? (
+      {activeIdx===0 ? (
+        // Default sheet — already loaded
+        tvMode ? (
+          <View style={{flex:1,padding:12}}>
+            {data.projects[0]?<ProjectDashboardTV p={data.projects[0]} data={data} color={color}/>:null}
+          </View>
+        ) : (
+          <ScrollView style={{flex:1}} contentContainerStyle={{alignItems:'center',paddingVertical:24,paddingBottom:40}}>
+            <View style={{width:'100%' as any,maxWidth:MAX_W,paddingHorizontal:24}}>
+              {data.projects[0]?<ProjectDashboard p={data.projects[0]} data={data} color={color}/>:null}
+            </View>
+          </ScrollView>
+        )
+      ) : (
+        // Extra sheets — each loads its own data
         <ProjectTab sheetId={activeTab.id} color={color} tvMode={tvMode}/>
-      ) : null}
+      )}
 
       {/* Add sheet modal */}
       {showAdd&&<AddProjectModal onAdd={handleAddSheet} onClose={()=>setShowAdd(false)}/>}
-
-      {/* Confirm delete modal */}
-      {pendingDelete!=null&&(
-        <ConfirmDeleteModal
-          label={allTabs[pendingDelete]?.label ?? 'this project'}
-          onConfirm={confirmRemoveSheet}
-          onClose={()=>setPendingDelete(null)}
-        />
-      )}
     </View>
   );
 }
@@ -1249,39 +1361,43 @@ function WebLayout() {
 // Shows the default sheet's projects PLUS a horizontal sheet-picker for
 // any extra Google Sheets the user added on web — so mobile and web
 // always reflect the same connected sheets (shared AsyncStorage state).
-function MobileHome() {
+function MobileHome({data:defaultData, defaultSheetId}:{data:SheetData; defaultSheetId:string}) {
   const {D,isDark,toggleTheme} = useTheme();
   const PC = getPC(D);
   const router=useRouter();
   const {extraSheets,setExtraSheets,loaded} = useExtraSheets();
   const [activeIdx,setActiveIdx]=useState(0);
   const [showAdd,setShowAdd]=useState(false);
-  const [pendingDelete,setPendingDelete]=useState<number|null>(null);
 
-  // Everything lives in AsyncStorage — no sheet ID baked into source code.
-  const allTabs = extraSheets;
-  const activeSheet = allTabs[activeIdx];
+  const allTabs = [{id:defaultSheetId,label:'Main'}, ...extraSheets];
+  const activeSheet = allTabs[activeIdx] ?? allTabs[0];
+  const isDefaultTab = activeIdx===0;
 
-  const handleAddSheet = (entry:SheetEntry) => {
-    setExtraSheets(prev => [...prev, entry]);
-    setActiveIdx(allTabs.length);
+  const handleAddSheet = async (entry:SheetEntry) => {
+    try {
+      const res = await fetch('/api/sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry),
+      });
+      if (res.ok) {
+        // Refresh from server to get latest list
+        const updated = await fetch('/api/sheets').then(r => r.json());
+        setExtraSheets(_ => updated);
+        setActiveIdx(1 + updated.length - 1); // switch to new tab
+      }
+    } catch (e) {
+      console.error('Failed to add sheet:', e);
+    }
   };
 
-  const requestRemoveSheet = (idx:number) => setPendingDelete(idx);
-  const confirmRemoveSheet = () => {
-    if(pendingDelete==null) return;
-    const idx = pendingDelete;
-    setExtraSheets(prev => prev.filter((_,i)=>i!==idx));
-    if(activeIdx>=idx) setActiveIdx(Math.max(0,activeIdx-1));
-    setPendingDelete(null);
-  };
+  // Only fetch a second sheet when an extra tab is actually selected.
+  const { data: extraData, loading: extraLoading, error: extraError } =
+    useSheetData(isDefaultTab ? undefined : activeSheet.id);
 
-  const { data: tabData, loading: tabLoadingRaw, error: tabErrorRaw } =
-    useSheetData(activeSheet?.id);
-
-  const data = tabData;
-  const tabLoading = !!activeSheet && tabLoadingRaw;
-  const tabError = !!activeSheet && tabErrorRaw;
+  const data = isDefaultTab ? defaultData : extraData;
+  const tabLoading = !isDefaultTab && extraLoading;
+  const tabError = !isDefaultTab && extraError;
 
   return(
     <View style={{flex:1,backgroundColor:D.bg}}>
@@ -1304,13 +1420,6 @@ function MobileHome() {
 
       {showAdd && <AddProjectModal onAdd={handleAddSheet} onClose={()=>setShowAdd(false)}/>}
 
-      {pendingDelete!=null&&(
-        <ConfirmDeleteModal
-          label={allTabs[pendingDelete]?.label ?? 'this project'}
-          onConfirm={confirmRemoveSheet}
-          onClose={()=>setPendingDelete(null)}
-        />
-      )}
 
       {/* Sheet tabs — only shown when there's more than one connected sheet */}
       {loaded && allTabs.length>1 && (
@@ -1320,34 +1429,15 @@ function MobileHome() {
           {allTabs.map((tab,i)=>{
             const active=activeIdx===i;
             return(
-              <View key={tab.id+i} style={{flexDirection:'row',alignItems:'center',gap:3}}>
-                <Pressable onPress={()=>setActiveIdx(i)}
-                  style={{paddingHorizontal:12,paddingVertical:7,borderRadius:8,
-                    backgroundColor:active?D.blue:D.card,
-                    borderWidth:1,borderColor:active?D.blue:D.border}}>
-                  <Text style={{fontSize:12,fontWeight:'700',color:active?'#fff':D.sub}} numberOfLines={1}>{tab.label}</Text>
-                </Pressable>
-                {active&&(
-                  <Pressable onPress={()=>requestRemoveSheet(i)}
-                    style={{width:20,height:20,borderRadius:10,backgroundColor:D.redDim,
-                      borderWidth:1,borderColor:D.red,alignItems:'center',justifyContent:'center'}}>
-                    <Text style={{fontSize:12,color:D.red,fontWeight:'900',lineHeight:14}}>×</Text>
-                  </Pressable>
-                )}
-              </View>
+              <Pressable key={tab.id+i} onPress={()=>setActiveIdx(i)}
+                style={{paddingHorizontal:12,paddingVertical:7,borderRadius:8,
+                  backgroundColor:active?D.blue:D.card,
+                  borderWidth:1,borderColor:active?D.blue:D.border}}>
+                <Text style={{fontSize:12,fontWeight:'700',color:active?'#fff':D.sub}} numberOfLines={1}>{tab.label}</Text>
+              </Pressable>
             );
           })}
         </ScrollView>
-      )}
-
-      {allTabs.length===0 && loaded && (
-        <View style={{flex:1,alignItems:'center',justifyContent:'center',gap:14,padding:20}}>
-          <Text style={{color:D.muted,fontSize:14}}>No projects yet.</Text>
-          <TouchableOpacity onPress={()=>setShowAdd(true)}
-            style={{paddingHorizontal:16,paddingVertical:10,backgroundColor:D.blue,borderRadius:8}}>
-            <Text style={{color:'#fff',fontSize:13,fontWeight:'800'}}>+ Add your first project</Text>
-          </TouchableOpacity>
-        </View>
       )}
 
       {tabLoading && (
@@ -1420,11 +1510,28 @@ export default function HomeScreen() {
 
 function HomeScreenInner() {
   const {D}=useTheme();
+  const {data,loading,error,refresh}=useSheetData();
   const {width}=useWindowDimensions();
   const isWeb=Platform.OS==='web'&&width>=768;
 
-  // No sheet is loaded here anymore — WebLayout/MobileHome each manage
-  // their own list of connected Google Sheets via AsyncStorage and fetch
-  // data per-tab. The app starts with zero sheets until the user adds one.
-  return isWeb?<WebLayout/>:<MobileHome/>;
+  if(loading)return(
+    <View style={{flex:1,backgroundColor:D.bg,alignItems:'center',justifyContent:'center',gap:12}}>
+      <Stack.Screen options={{headerShown:false}}/>
+      <View style={{width:40,height:40,borderRadius:20,backgroundColor:D.blue,opacity:0.15}}/>
+      <Text style={{color:D.muted,fontSize:16,letterSpacing:3,fontWeight:'600'}}>LOADING...</Text>
+    </View>
+  );
+
+  if(error||!data)return(
+    <View style={{flex:1,backgroundColor:D.bg,alignItems:'center',justifyContent:'center',gap:16}}>
+      <Stack.Screen options={{headerShown:false}}/>
+      <Text style={{color:D.red,fontSize:16,fontWeight:'600'}}>⚠ {error??'No data'}</Text>
+      <TouchableOpacity onPress={refresh}
+        style={{paddingHorizontal:20,paddingVertical:12,backgroundColor:D.blue,borderRadius:8}}>
+        <Text style={{color:'#fff',fontSize:14,fontWeight:'700'}}>Retry</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return isWeb?<WebLayout data={data} defaultSheetId={DEFAULT_SHEET_ID}/>:<MobileHome data={data} defaultSheetId={DEFAULT_SHEET_ID}/>;
 }

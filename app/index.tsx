@@ -293,7 +293,7 @@ function BudgetColumns({data,w,h}:{data:{cat:string;pl:number;ac:number}[];w:num
   );
 }
 
-
+function HBar({label,v,max,color,sub,rank,compact}:{label:string;v:number;max:number;color:string;sub?:string;rank?:number;compact?:boolean}) {
   const {D} = useTheme();
   const pct=max>0?(v/max)*100:0;
   const py=compact?2:5;

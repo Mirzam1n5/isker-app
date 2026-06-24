@@ -11,13 +11,13 @@ import { SHEET_ID as DEFAULT_SHEET_ID } from '../constants';
 const LIGHT = {
   bg:'#f5f6f8',       panel:'#ffffff',    card:'#ffffff',     border:'#e8e9ed',
   text:'#15161a',     sub:'#6b6d76',      muted:'#9b9da6',
-  green:'#3a8f5c',    greenDim:'#e9f3ec',
-  red:'#c2543a',      redDim:'#f8eae5',
-  yellow:'#b8862f',   yellowDim:'#f7eedd',
-  blue:'#5f93b8',     blueDim:'#e9f0f5',
-  accent:'#8a6a4a',   accentDim:'#f0e7da',
-  orange:'#d68a4a',   orangeDim:'#f9eee1',
-  cyan:'#5f93b8',     cyanDim:'#e9f0f5',
+  green:'#34b378',    greenDim:'#e6f7ee',
+  red:'#e8604a',      redDim:'#fdeae5',
+  yellow:'#e0a830',   yellowDim:'#fdf3e0',
+  blue:'#5aa8e8',     blueDim:'#e9f3fd',
+  accent:'#c4895a',   accentDim:'#f6ece1',
+  orange:'#f5a558',   orangeDim:'#fdf0e1',
+  cyan:'#5aa8e8',     cyanDim:'#e9f3fd',
   shadow:'rgba(15,16,20,0.06)',
 };
 

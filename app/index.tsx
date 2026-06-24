@@ -504,28 +504,39 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
         </Card>
       </View>
 
-      {/* ══ ROW 2: Category | EVM S-Curve | CPI/SPI trend ══ */}
+      {/* ══ ROW 2: Budget by Category | EVM S-Curve | CPI/SPI trend ══ */}
       <View style={{flex:5,flexDirection:'row',gap:8}}>
         <Card style={{flex:2,padding:12,gap:6}}>
-          <SH label="By Category" color={D.orange}/>
-          <View style={{flex:1,gap:8,justifyContent:'center'}}>
-            {catData.map(c=>{
-              const max=catData[0]?.pl??1,over=c.ac>c.pl;
-              return(
-                <View key={c.cat} style={{gap:2}}>
-                  <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-                    <Text style={{fontSize:11,color:D.text,flex:1}} numberOfLines={1}>{c.cat}</Text>
-                    <Text style={{fontSize:11,color:over?D.red:D.green,fontWeight:'700'}}>{fmtM(c.ac)}</Text>
+          <SH label="Budget by Category" color={D.orange}/>
+          <View style={{flex:1,flexDirection:'row',gap:10,alignItems:'center'}}>
+            <Donut
+              slices={catData.map((c,i)=>({v:c.ac,c:DC[i%7]}))}
+              size={72}
+              label={fmtM(catData.reduce((s,c)=>s+c.ac,0))}
+              sublabel="actual"
+            />
+            <View style={{flex:1,gap:4}}>
+              {catData.map((c,i)=>{
+                const over=c.ac>c.pl;
+                const pct=c.pl>0?Math.round((c.ac/c.pl)*100):0;
+                return(
+                  <View key={c.cat} style={{gap:2}}>
+                    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+                      <View style={{flexDirection:'row',alignItems:'center',gap:4,flex:1}}>
+                        <View style={{width:7,height:7,borderRadius:3.5,backgroundColor:DC[i%7]}}/>
+                        <Text style={{fontSize:10,color:D.text,flex:1}} numberOfLines={1}>{c.cat}</Text>
+                      </View>
+                      <Text style={{fontSize:10,fontWeight:'800',color:over?D.red:D.green,marginLeft:4}}>{pct}%</Text>
+                    </View>
+                    <View style={{height:4,backgroundColor:D.bg,borderRadius:2,overflow:'hidden'}}>
+                      <View style={{position:'absolute',top:0,left:0,height:4,width:`${Math.min((c.pl/catData[0].pl)*100,100)}%` as any,backgroundColor:DC[i%7],opacity:0.25,borderRadius:2}}/>
+                      <View style={{position:'absolute',top:0,left:0,height:4,width:`${Math.min((c.ac/catData[0].pl)*100,100)}%` as any,backgroundColor:over?D.red:DC[i%7],borderRadius:2}}/>
+                    </View>
                   </View>
-                  <View style={{height:8,backgroundColor:D.bg,borderRadius:4,overflow:'hidden'}}>
-                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.pl/max)*100}%` as any,backgroundColor:D.blue,opacity:0.25,borderRadius:4}}/>
-                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.ac/max)*100}%` as any,backgroundColor:over?D.red:D.green,opacity:0.85,borderRadius:4}}/>
-                  </View>
-                </View>
-              );
-            })}
+                );
+              })}
+            </View>
           </View>
-          <Legend items={[{label:'Planned',color:D.blue},{label:'Actual',color:D.green}]}/>
         </Card>
         {evm.length>=2&&<>
           <Card style={{flex:3,padding:12,gap:6}}>
@@ -706,7 +717,7 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
         </View>
       </Card>
 
-      {/* ══ ROW 2: Gauge + CPI/SPI tiles + Manpower + Milestone Summary ══ */}
+      {/* ══ ROW 2: Gauge + CPI/SPI + Milestones + Budget by Category ══ */}
       <View style={{flexDirection:isNarrow?'column':'row',gap:14}}>
 
         {/* Gauge */}
@@ -730,7 +741,7 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
         </View>
 
         {/* Milestones */}
-        <Card style={{flex:1,padding:16,gap:14}}>
+        <Card style={{flex:2,padding:16,gap:14}}>
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
             <SH label="Milestones" color={D.cyan}/>
             <View style={{flexDirection:'row',gap:6}}>
@@ -771,34 +782,43 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
             </View>
           </View>
         </Card>
-      </View>
 
-      {/* ══ ROW 3: By Category ══ */}
-      <View style={{flexDirection:isNarrow?'column':'row',gap:14}}>
-        <Card style={{flex:3,padding:16,gap:10}}>
-          <SH label="By Category" color={D.orange}/>
-          <View style={{gap:9}}>
-            {catData.map(c=>{
-              const max=catData[0]?.pl??1,over=c.ac>c.pl;
-              return(
-                <View key={c.cat} style={{gap:3}}>
-                  <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-                    <Text style={{fontSize:12,color:D.text,flex:1}} numberOfLines={1}>{c.cat}</Text>
-                    <Text style={{fontSize:12,color:over?D.red:D.green,fontWeight:'700'}}>{fmtM(c.ac)}</Text>
+        {/* Budget by Category */}
+        <Card style={{flex:2,padding:16,gap:10}}>
+          <SH label="Budget by Category" color={D.orange}/>
+          <View style={{flex:1,flexDirection:'row',gap:14,alignItems:'center'}}>
+            <Donut
+              slices={catData.map((c,i)=>({v:c.ac,c:DC[i%7]}))}
+              size={90}
+              label={fmtM(catData.reduce((s,c)=>s+c.ac,0))}
+              sublabel="actual"
+            />
+            <View style={{flex:1,gap:6}}>
+              {catData.map((c,i)=>{
+                const over=c.ac>c.pl;
+                const pct=c.pl>0?Math.round((c.ac/c.pl)*100):0;
+                return(
+                  <View key={c.cat} style={{gap:2}}>
+                    <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+                      <View style={{flexDirection:'row',alignItems:'center',gap:5,flex:1}}>
+                        <View style={{width:8,height:8,borderRadius:4,backgroundColor:DC[i%7]}}/>
+                        <Text style={{fontSize:11,color:D.text,flex:1}} numberOfLines={1}>{c.cat}</Text>
+                      </View>
+                      <Text style={{fontSize:11,fontWeight:'800',color:over?D.red:D.green,marginLeft:6}}>{pct}%</Text>
+                    </View>
+                    <View style={{height:5,backgroundColor:D.bg,borderRadius:2,overflow:'hidden'}}>
+                      <View style={{position:'absolute',top:0,left:0,height:5,width:`${Math.min((c.pl/catData[0].pl)*100,100)}%` as any,backgroundColor:DC[i%7],opacity:0.25,borderRadius:2}}/>
+                      <View style={{position:'absolute',top:0,left:0,height:5,width:`${Math.min((c.ac/catData[0].pl)*100,100)}%` as any,backgroundColor:over?D.red:DC[i%7],borderRadius:2}}/>
+                    </View>
                   </View>
-                  <View style={{height:8,backgroundColor:D.bg,borderRadius:4,overflow:'hidden'}}>
-                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.pl/max)*100}%` as any,backgroundColor:D.blue,opacity:0.25,borderRadius:4}}/>
-                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.ac/max)*100}%` as any,backgroundColor:over?D.red:D.green,opacity:0.85,borderRadius:4}}/>
-                  </View>
-                </View>
-              );
-            })}
+                );
+              })}
+            </View>
           </View>
-          <Legend items={[{label:'Planned',color:D.blue},{label:'Actual',color:D.green}]}/>
         </Card>
       </View>
 
-      {/* ══ ROW 4: EVM S-Curve + CPI/SPI trend ══ */}
+      {/* ══ ROW 3: EVM S-Curve + CPI/SPI trend + Issues ══ */}
       {evm.length>=2&&(
         <View style={{flexDirection:isMid?'column':'row',gap:14}}>
           <Card style={{flex:5,padding:16,gap:10}}>
@@ -1086,6 +1106,7 @@ function WebLayout({sheets,setSheets}:{sheets:SheetEntry[];setSheets:(s:SheetEnt
   const [activeIdx,setActiveIdx]=useState(0);
   const [tvMode,setTvMode]=useState(false);
   const [showAdd,setShowAdd]=useState(false);
+  const [confirmRemove,setConfirmRemove]=useState<{idx:number;label:string}|null>(null);
 
   const allTabs = sheets.map(e=>({...e,isDefault:false}));
 
@@ -1128,6 +1149,33 @@ function WebLayout({sheets,setSheets}:{sheets:SheetEntry[];setSheets:(s:SheetEnt
     <View style={{flex:1,backgroundColor:D.bg}}>
       <Stack.Screen options={{headerShown:false}}/>
 
+      {/* Confirm remove modal */}
+      {confirmRemove&&(
+        <View style={{position:'absolute',top:0,left:0,right:0,bottom:0,backgroundColor:'rgba(0,0,0,0.6)',
+          zIndex:999,alignItems:'center',justifyContent:'center'}}>
+          <View style={{backgroundColor:D.panel,borderRadius:12,borderWidth:1,borderColor:D.border,
+            padding:28,maxWidth:380,width:'90%' as any,gap:16}}>
+            <Text style={{color:D.text,fontSize:16,fontWeight:'900'}}>Remove Project?</Text>
+            <Text style={{color:D.muted,fontSize:13,lineHeight:20}}>
+              Are you sure you want to remove{' '}
+              <Text style={{color:D.text,fontWeight:'700'}}>{confirmRemove.label}</Text>
+              {' '}from ISKER? The Google Sheet itself won't be affected.
+            </Text>
+            <View style={{flexDirection:'row',gap:10,justifyContent:'flex-end'}}>
+              <TouchableOpacity onPress={()=>setConfirmRemove(null)}
+                style={{paddingHorizontal:18,paddingVertical:9,borderRadius:7,
+                  borderWidth:1,borderColor:D.border,backgroundColor:D.bg}}>
+                <Text style={{color:D.text,fontSize:13,fontWeight:'700'}}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={()=>{handleRemoveSheet(confirmRemove.idx);setConfirmRemove(null);}}
+                style={{paddingHorizontal:18,paddingVertical:9,borderRadius:7,backgroundColor:D.red}}>
+                <Text style={{color:'#fff',fontSize:13,fontWeight:'700'}}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Tab bar */}
       <View style={{backgroundColor:D.panel,borderBottomWidth:1,borderBottomColor:D.border,alignItems:'center',
         shadowColor:'rgba(0,0,0,0.05)',shadowOffset:{width:0,height:2},shadowOpacity:1,shadowRadius:4,elevation:2}}>
@@ -1147,9 +1195,9 @@ function WebLayout({sheets,setSheets}:{sheets:SheetEntry[];setSheets:(s:SheetEnt
                     <View style={{width:7,height:7,borderRadius:3.5,backgroundColor:on?col:D.muted}}/>
                     <Text style={{fontSize:tvMode?12:13,fontWeight:'800',letterSpacing:0.3,color:on?D.text:D.sub}}>{tab.label}</Text>
                   </TouchableOpacity>
-                  {/* Remove button for extra sheets */}
+                  {/* Remove button — shows confirm dialog */}
                   {!tab.isDefault&&on&&(
-                    <TouchableOpacity onPress={()=>handleRemoveSheet(i)}
+                    <TouchableOpacity onPress={()=>setConfirmRemove({idx:i,label:tab.label})}
                       style={{width:18,height:18,borderRadius:9,backgroundColor:D.redDim,
                         borderWidth:1,borderColor:D.red,alignItems:'center',justifyContent:'center',marginLeft:-4}}>
                       <Text style={{fontSize:11,color:D.red,fontWeight:'900',lineHeight:13}}>×</Text>
@@ -1158,8 +1206,6 @@ function WebLayout({sheets,setSheets}:{sheets:SheetEntry[];setSheets:(s:SheetEnt
                 </View>
               );
             })}
-
-            {/* + Add project button */}
             <TouchableOpacity onPress={()=>setShowAdd(true)}
               style={{paddingHorizontal:12,paddingVertical:8,marginLeft:4,
                 flexDirection:'row',alignItems:'center',gap:5,

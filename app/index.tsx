@@ -420,8 +420,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
             {l:'Spent',v:fmtM(spent),c:bCol,s:fmtP(bPct)},
             {l:'CPI',v:cpi.toFixed(2),c:iCol(D,cpi)},
             {l:'SPI',v:spi.toFixed(2),c:iCol(D,spi)},
-            {l:'Workers',v:`${activeW}/${workers.length}`,c:D.cyan},
-            {l:'Issues',v:String(openIss),c:openIss>0?D.yellow:D.green,s:`${highIss} crit.`},
+
           ].map(kpi=>(
             <View key={kpi.l} style={{backgroundColor:D.bg,borderRadius:6,borderWidth:1,borderColor:D.border,paddingHorizontal:10,paddingVertical:4,alignItems:'center',minWidth:64}}>
               <Text style={{fontSize:8,color:D.muted,letterSpacing:1,textTransform:'uppercase'}}>{kpi.l}</Text>
@@ -462,10 +461,10 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
           </Card>
         </View>
 
-        {/* Manpower + Milestones — combined */}
+        {/* Milestones */}
         <Card style={{flex:1,padding:12,gap:8}}>
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-            <SH label="Manpower & Milestones" color={D.cyan}/>
+            <SH label="Milestones" color={D.cyan}/>
             <View style={{flexDirection:'row',gap:4}}>
               {[{l:'Done',v:msDone,c:D.green},{l:'In Prog',v:msInP,c:D.blue},{l:'Delayed',v:msDel,c:msDel>0?D.red:D.muted}].map(item=>(
                 <View key={item.l} style={{backgroundColor:item.c+'18',borderWidth:1,borderColor:item.c+'44',
@@ -476,61 +475,37 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
               ))}
             </View>
           </View>
-          <View style={{flex:1,flexDirection:'row',gap:12,alignItems:'center'}}>
-            {/* Donut */}
-            <View style={{alignItems:'center',gap:4}}>
-              <Donut slices={[{v:activeW,c:D.green},{v:workers.length-activeW,c:D.muted}]} size={80} label={String(activeW)} sublabel="active"/>
-              <Text style={{fontSize:9,color:D.muted}}>of {workers.length}</Text>
-            </View>
-            {/* Dept bars */}
-            <View style={{flex:1,gap:4}}>
-              {depts.slice(0,5).map((d,i)=>(
-                <HBar key={d[0]} label={d[0]} v={d[1]} max={depts[0][1]} color={DC[i%7]} sub={String(d[1])}/>
-              ))}
-            </View>
-            {/* Divider */}
-            <View style={{width:1,height:'100%' as any,backgroundColor:D.border}}/>
-            {/* Phase progress */}
-            <View style={{flex:1,gap:4}}>
-              {phases.map(phase=>{
-                const phMs=schedule.filter(m=>m.phase===phase);
-                const phDone=phMs.filter(m=>m.status==='Done').length;
-                const phPct=phMs.length>0?(phDone/phMs.length)*100:0;
-                const phCol=phPct===100?D.green:phMs.some(m=>m.status==='Delayed')?D.red:D.blue;
-                return(
-                  <View key={phase} style={{gap:2}}>
-                    <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-                      <Text style={{fontSize:10,color:D.text}}>{phase}</Text>
-                      <Text style={{fontSize:10,color:phCol,fontWeight:'700'}}>{fmtP(phPct)}</Text>
-                    </View>
-                    <View style={{height:6,backgroundColor:D.bg,borderRadius:3}}>
-                      <View style={{height:6,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:3}}/>
-                    </View>
+          <View style={{flex:1,gap:4}}>
+            {phases.map(phase=>{
+              const phMs=schedule.filter(m=>m.phase===phase);
+              const phDone=phMs.filter(m=>m.status==='Done').length;
+              const phPct=phMs.length>0?(phDone/phMs.length)*100:0;
+              const phCol=phPct===100?D.green:phMs.some(m=>m.status==='Delayed')?D.red:D.blue;
+              return(
+                <View key={phase} style={{gap:2}}>
+                  <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+                    <Text style={{fontSize:10,color:D.text}}>{phase}</Text>
+                    <Text style={{fontSize:10,color:phCol,fontWeight:'700'}}>{fmtP(phPct)}</Text>
                   </View>
-                );
-              })}
-              <View style={{backgroundColor:spi>=1?D.greenDim:D.redDim,borderWidth:1,
-                borderColor:spi>=1?D.green:D.red,padding:5,borderRadius:5,
-                flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:2}}>
-                <Text style={{fontSize:9,color:D.sub}}>SPI</Text>
-                <Text style={{fontSize:14,fontWeight:'900',color:iCol(D,spi)}}>{spi.toFixed(2)}</Text>
-                <Text style={{fontSize:8,color:iCol(D,spi),fontWeight:'700'}}>{spi>=1?'✓':'⚠'}</Text>
-              </View>
+                  <View style={{height:6,backgroundColor:D.bg,borderRadius:3}}>
+                    <View style={{height:6,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:3}}/>
+                  </View>
+                </View>
+              );
+            })}
+            <View style={{backgroundColor:spi>=1?D.greenDim:D.redDim,borderWidth:1,
+              borderColor:spi>=1?D.green:D.red,padding:5,borderRadius:5,
+              flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:2}}>
+              <Text style={{fontSize:9,color:D.sub}}>SPI</Text>
+              <Text style={{fontSize:14,fontWeight:'900',color:iCol(D,spi)}}>{spi.toFixed(2)}</Text>
+              <Text style={{fontSize:8,color:iCol(D,spi),fontWeight:'700'}}>{spi>=1?'✓':'⚠'}</Text>
             </View>
           </View>
         </Card>
       </View>
 
-      {/* ══ ROW 2: Budget trend | Category | EVM S-Curve | CPI/SPI trend ══ */}
+      {/* ══ ROW 2: Category | EVM S-Curve | CPI/SPI trend ══ */}
       <View style={{flex:5,flexDirection:'row',gap:8}}>
-        <Card style={{flex:3,padding:12,gap:6}}>
-          <SH label="Budget Monthly Trend" color={D.blue}/>
-          {months.length>=2
-            ?<ChartBox2>{(cw,ch)=><LineCurve series={[{data:mPl,color:D.blue,dashed:true},{data:mAc,color:D.orange}]} w={cw} h={ch} labels={months.map(m=>m?.slice(5,7)??'')}/>}</ChartBox2>
-            :<View style={{flex:1}}/>
-          }
-          <Legend items={[{label:'Planned',color:D.blue},{label:'Actual',color:D.orange}]}/>
-        </Card>
         <Card style={{flex:2,padding:12,gap:6}}>
           <SH label="By Category" color={D.orange}/>
           <View style={{flex:1,gap:8,justifyContent:'center'}}>
@@ -709,8 +684,7 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
             {l:'Spent',    v:fmtM(spent),           c:bCol,  s:fmtP(bPct)+' used'},
             {l:'CPI',      v:cpi.toFixed(2),        c:iCol(D,cpi), s:cpi>=1?'On budget':'Over budget'},
             {l:'SPI',      v:spi.toFixed(2),        c:iCol(D,spi), s:spi>=1?'On schedule':'Behind'},
-            {l:'Workers',  v:String(activeW),       c:D.cyan,    s:`of ${workers.length}`},
-            {l:'Issues',   v:String(openIss),       c:openIss>0?D.yellow:D.green, s:`${highIss} critical`},
+
           ].map(kpi=>(
             <View key={kpi.l} style={{flex:1,backgroundColor:D.bg,borderRadius:8,borderWidth:1,borderColor:D.border,padding:10,alignItems:'center'}}>
               <Text style={{fontSize:9,color:D.muted,letterSpacing:1.5,textTransform:'uppercase',marginBottom:2}}>{kpi.l}</Text>
@@ -755,11 +729,10 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
           </Card>
         </View>
 
-        {/* Manpower + Milestone — combined card */}
+        {/* Milestones */}
         <Card style={{flex:1,padding:16,gap:14}}>
-          {/* Header row */}
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
-            <SH label="Manpower & Milestones" color={D.cyan}/>
+            <SH label="Milestones" color={D.cyan}/>
             <View style={{flexDirection:'row',gap:6}}>
               {[{l:'Done',v:msDone,c:D.green},{l:'In Prog',v:msInP,c:D.blue},{l:'Delayed',v:msDel,c:msDel>0?D.red:D.muted}].map(item=>(
                 <View key={item.l} style={{backgroundColor:item.c+'18',borderWidth:1,borderColor:item.c+'44',
@@ -770,82 +743,38 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
               ))}
             </View>
           </View>
-
-          <View style={{flexDirection:'row',gap:20}}>
-            {/* Left: Donut + counts */}
-            <View style={{alignItems:'center',gap:8}}>
-              <Donut slices={[{v:activeW,c:D.green},{v:workers.length-activeW,c:D.muted}]} size={96} label={String(activeW)} sublabel="active"/>
-              <View style={{flexDirection:'row',gap:10}}>
-                <View style={{alignItems:'center'}}>
-                  <Text style={{fontSize:9,color:D.muted}}>TOTAL</Text>
-                  <Text style={{fontSize:15,fontWeight:'800',color:D.text}}>{workers.length}</Text>
-                </View>
-                <View style={{width:1,backgroundColor:D.border}}/>
-                <View style={{alignItems:'center'}}>
-                  <Text style={{fontSize:9,color:D.muted}}>OFF</Text>
-                  <Text style={{fontSize:15,fontWeight:'800',color:D.muted}}>{workers.length-activeW}</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Middle: Dept bars */}
-            <View style={{flex:1,gap:6}}>
-              <Text style={{fontSize:9,color:D.muted,letterSpacing:1.5,textTransform:'uppercase',marginBottom:2}}>By Department</Text>
-              {depts.slice(0,6).map((d,i)=>(
-                <HBar key={d[0]} label={d[0]} v={d[1]} max={depts[0][1]} color={DC[i%7]} sub={String(d[1])}/>
-              ))}
-            </View>
-
-            {/* Divider */}
-            <View style={{width:1,backgroundColor:D.border}}/>
-
-            {/* Right: Phase progress */}
-            <View style={{flex:1,gap:6}}>
-              <Text style={{fontSize:9,color:D.muted,letterSpacing:1.5,textTransform:'uppercase',marginBottom:2}}>Phase Progress</Text>
-              {phases.map(phase=>{
-                const phMs=schedule.filter(m=>m.phase===phase);
-                const phDone=phMs.filter(m=>m.status==='Done').length;
-                const phPct=phMs.length>0?(phDone/phMs.length)*100:0;
-                const phCol=phPct===100?D.green:phMs.some(m=>m.status==='Delayed')?D.red:D.blue;
-                return(
-                  <View key={phase} style={{gap:3}}>
-                    <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-                      <Text style={{fontSize:11,color:D.text}}>{phase}</Text>
-                      <Text style={{fontSize:11,color:phCol,fontWeight:'700'}}>{fmtP(phPct)}</Text>
-                    </View>
-                    <View style={{height:8,backgroundColor:D.bg,borderRadius:4}}>
-                      <View style={{height:8,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:4}}/>
-                    </View>
+          <View style={{flex:1,gap:6}}>
+            {phases.map(phase=>{
+              const phMs=schedule.filter(m=>m.phase===phase);
+              const phDone=phMs.filter(m=>m.status==='Done').length;
+              const phPct=phMs.length>0?(phDone/phMs.length)*100:0;
+              const phCol=phPct===100?D.green:phMs.some(m=>m.status==='Delayed')?D.red:D.blue;
+              return(
+                <View key={phase} style={{gap:3}}>
+                  <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+                    <Text style={{fontSize:11,color:D.text}}>{phase}</Text>
+                    <Text style={{fontSize:11,color:phCol,fontWeight:'700'}}>{fmtP(phPct)}</Text>
                   </View>
-                );
-              })}
-              {/* SPI pill */}
-              <View style={{backgroundColor:spi>=1?D.greenDim:D.redDim,borderWidth:1,
-                borderColor:spi>=1?D.green:D.red,padding:8,borderRadius:6,
-                flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:4}}>
-                <Text style={{fontSize:10,color:D.sub,letterSpacing:1}}>SCHEDULE SPI</Text>
-                <Text style={{fontSize:18,fontWeight:'900',color:iCol(D,spi)}}>{spi.toFixed(2)}
-                  <Text style={{fontSize:10,fontWeight:'600'}}> {spi>=1?'✓ on track':'⚠ behind'}</Text>
-                </Text>
-              </View>
+                  <View style={{height:8,backgroundColor:D.bg,borderRadius:4}}>
+                    <View style={{height:8,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:4}}/>
+                  </View>
+                </View>
+              );
+            })}
+            <View style={{backgroundColor:spi>=1?D.greenDim:D.redDim,borderWidth:1,
+              borderColor:spi>=1?D.green:D.red,padding:8,borderRadius:6,
+              flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:4}}>
+              <Text style={{fontSize:10,color:D.sub,letterSpacing:1}}>SCHEDULE SPI</Text>
+              <Text style={{fontSize:18,fontWeight:'900',color:iCol(D,spi)}}>{spi.toFixed(2)}
+                <Text style={{fontSize:10,fontWeight:'600'}}> {spi>=1?'✓ on track':'⚠ behind'}</Text>
+              </Text>
             </View>
           </View>
         </Card>
       </View>
 
-      {/* ══ ROW 3: Budget trend + By Category ══ */}
+      {/* ══ ROW 3: By Category ══ */}
       <View style={{flexDirection:isNarrow?'column':'row',gap:14}}>
-        <Card style={{flex:5,padding:16,gap:10}}>
-          <SH label="Budget Monthly Trend" color={D.blue}/>
-          {months.length>=2
-            ?<ChartBox h={150}>{(cw)=><LineCurve
-                series={[{data:mPl,color:D.blue,dashed:true},{data:mAc,color:D.orange}]}
-                w={cw} h={150} labels={months.map(m=>m?.slice(5,7)??'')}
-              />}</ChartBox>
-            :<Text style={{color:D.muted,fontSize:12,height:150,paddingTop:60,textAlign:'center'}}>Not enough data</Text>
-          }
-          <Legend items={[{label:'Planned',color:D.blue},{label:'Actual',color:D.orange}]}/>
-        </Card>
         <Card style={{flex:3,padding:16,gap:10}}>
           <SH label="By Category" color={D.orange}/>
           <View style={{gap:9}}>

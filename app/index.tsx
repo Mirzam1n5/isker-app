@@ -482,8 +482,8 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
                     <Text style={{fontSize:13,color:D.text,fontWeight:'600'}}>{phase}</Text>
                     <Text style={{fontSize:13,color:phCol,fontWeight:'800'}}>{fmtP(phPct)}</Text>
                   </View>
-                  <View style={{height:8,backgroundColor:D.bg,borderRadius:4}}>
-                    <View style={{height:8,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:4}}/>
+                  <View style={{height:14,backgroundColor:D.bg,borderRadius:7}}>
+                    <View style={{height:14,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:7}}/>
                   </View>
                 </View>
               );
@@ -536,14 +536,14 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
           </Card>
           <Card style={{flex:1.8,padding:18,gap:10}}>
             <SH label="Budget by Category" color={D.orange}/>
-            <View style={{flex:1,flexDirection:'row',alignItems:'center',gap:16}}>
+            <View style={{flex:1,alignItems:'center',gap:14}}>
               <Donut
                 slices={catData.map((c,i)=>({v:c.ac,c:DC[i%7]}))}
-                size={140}
+                size={120}
                 label={fmtM(catData.reduce((s,c)=>s+c.ac,0))}
                 sublabel="actual"
               />
-              <View style={{gap:10,flex:1}}>
+              <View style={{gap:10,alignSelf:'stretch'}}>
                 {catData.map((c,i)=>{
                   const over=c.ac>c.pl;
                   const pct=c.pl>0?Math.round((c.ac/c.pl)*100):0;
@@ -556,8 +556,8 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
                         </View>
                         <Text style={{fontSize:13,fontWeight:'800',color:over?D.red:D.green}}>{pct}%</Text>
                       </View>
-                      <View style={{height:6,backgroundColor:D.bg,borderRadius:3,overflow:'hidden'}}>
-                        <View style={{height:6,width:`${Math.min(pct,100)}%` as any,backgroundColor:over?D.red:DC[i%7],borderRadius:3}}/>
+                      <View style={{height:14,backgroundColor:D.bg,borderRadius:7,overflow:'hidden'}}>
+                        <View style={{height:14,width:`${Math.min(pct,100)}%` as any,backgroundColor:over?D.red:DC[i%7],borderRadius:7}}/>
                       </View>
                     </View>
                   );
@@ -721,8 +721,8 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
                     <Text style={{fontSize:11,color:D.text}}>{phase}</Text>
                     <Text style={{fontSize:11,color:phCol,fontWeight:'700'}}>{fmtP(phPct)}</Text>
                   </View>
-                  <View style={{height:8,backgroundColor:D.bg,borderRadius:4}}>
-                    <View style={{height:8,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:4}}/>
+                  <View style={{height:14,backgroundColor:D.bg,borderRadius:7}}>
+                    <View style={{height:14,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:7}}/>
                   </View>
                 </View>
               );
@@ -739,14 +739,22 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
         </Card>
 
         {/* Budget by Category */}
-        <Card style={{flex:2,padding:16,gap:10}}>
+        <Card style={{flex:2,padding:16,gap:14}}>
           <SH label="Budget by Category" color={D.orange}/>
-          <View style={{flex:1,gap:8,justifyContent:'center'}}>
+          <View style={{alignItems:'center'}}>
+            <Donut
+              slices={catData.map((c,i)=>({v:c.ac,c:DC[i%7]}))}
+              size={104}
+              label={fmtM(catData.reduce((s,c)=>s+c.ac,0))}
+              sublabel="actual"
+            />
+          </View>
+          <View style={{flex:1,gap:10,justifyContent:'center'}}>
             {catData.map((c,i)=>{
               const max=catData[0]?.pl??1,over=c.ac>c.pl;
               const pct=c.pl>0?Math.round((c.ac/c.pl)*100):0;
               return(
-                <View key={c.cat} style={{gap:3}}>
+                <View key={c.cat} style={{gap:4}}>
                   <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
                     <View style={{flexDirection:'row',alignItems:'center',gap:6,flex:1}}>
                       <View style={{width:8,height:8,borderRadius:4,backgroundColor:DC[i%7]}}/>
@@ -757,9 +765,9 @@ function ProjectDashboard({p,data,color}:{p:Project;data:SheetData;color:string}
                       <Text style={{fontSize:11,fontWeight:'800',color:over?D.red:D.green,minWidth:36,textAlign:'right'}}>{pct}%</Text>
                     </View>
                   </View>
-                  <View style={{height:8,backgroundColor:D.bg,borderRadius:4,overflow:'hidden'}}>
-                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.pl/max)*100}%` as any,backgroundColor:DC[i%7],opacity:0.25,borderRadius:4}}/>
-                    <View style={{position:'absolute',top:0,left:0,height:8,width:`${(c.ac/max)*100}%` as any,backgroundColor:over?D.red:DC[i%7],opacity:0.85,borderRadius:4}}/>
+                  <View style={{height:14,backgroundColor:D.bg,borderRadius:7,overflow:'hidden'}}>
+                    <View style={{position:'absolute',top:0,left:0,height:14,width:`${(c.pl/max)*100}%` as any,backgroundColor:DC[i%7],opacity:0.25,borderRadius:7}}/>
+                    <View style={{position:'absolute',top:0,left:0,height:14,width:`${(c.ac/max)*100}%` as any,backgroundColor:over?D.red:DC[i%7],opacity:0.85,borderRadius:7}}/>
                   </View>
                 </View>
               );

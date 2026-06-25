@@ -44,7 +44,10 @@ function useTheme(){ return useContext(ThemeContext); }
 
 // ── Helpers (theme-aware, take D as first arg) ──────────────────────
 const getPC = (D:Palette) => [D.blue, D.accent, D.orange];
-const getDC = (D:Palette) => [D.blue, D.accent, D.green, D.orange, D.yellow, D.cyan, D.red];
+const getDC = (D:Palette) => [
+  D.blue, D.orange, D.green, D.yellow, D.red,
+  '#9b7fd4', '#4fb8a8', '#e8869a', '#6fa86f', '#c9986b',
+];
 
 const num  = (v:any) => parseFloat(String(v??0).replace(/\s/g,'').replace(',','.')) || 0;
 const fmtM = (v:number) => v>=1e6?`$${(v/1e6).toFixed(1)}M`:v>=1e3?`$${(v/1e3).toFixed(0)}K`:`$${v.toFixed(0)}`;
@@ -356,6 +359,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
   const {D} = useTheme();
   const PC = getPC(D);
   const DC = getDC(D);
+  const [openModal,setOpenModal] = useState<'milestones'|'budget'|null>(null);
 
   const workers  = data.workers.filter(w=>w.project_id===p.project_id);
   const evm      = data.evm.filter(e=>e.project_id===p.project_id);
@@ -460,7 +464,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
           </Card>
         </View>
 
-        {/* Milestones — full phase list, like before but bigger */}
+        {/* Milestones — truncated phase list + View all on TV */}
         <Card style={{flex:1.6,padding:18,gap:10}}>
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
             <SH label="Milestones" color={D.cyan}/>
@@ -475,7 +479,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
             </View>
           </View>
           <View style={{flex:1,gap:8,justifyContent:'center'}}>
-            {phases.map(phase=>{
+            {phases.slice(0,6).map(phase=>{
               const phMs=schedule.filter(m=>m.phase===phase);
               const phDone=phMs.filter(m=>m.status==='Done').length;
               const phPct=phMs.length>0?(phDone/phMs.length)*100:0;
@@ -483,7 +487,7 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
               return(
                 <View key={phase} style={{gap:4}}>
                   <View style={{flexDirection:'row',justifyContent:'space-between'}}>
-                    <Text style={{fontSize:13,color:D.text,fontWeight:'600'}}>{phase}</Text>
+                    <Text style={{fontSize:13,color:D.text,fontWeight:'600'}} numberOfLines={1}>{phase}</Text>
                     <Text style={{fontSize:13,color:phCol,fontWeight:'800'}}>{fmtP(phPct)}</Text>
                   </View>
                   <View style={{height:14,backgroundColor:D.bg,borderRadius:7}}>
@@ -492,16 +496,36 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
                 </View>
               );
             })}
-            <View style={{backgroundColor:spi>=1?D.greenDim:D.redDim,borderWidth:1,
-              borderColor:spi>=1?D.green:D.red,padding:8,borderRadius:8,
-              flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:4}}>
-              <Text style={{fontSize:12,color:D.sub,fontWeight:'700'}}>SPI</Text>
-              <Text style={{fontSize:18,fontWeight:'900',color:iCol(D,spi)}}>{spi.toFixed(2)}</Text>
-              <Text style={{fontSize:11,color:iCol(D,spi),fontWeight:'700'}}>{spi>=1?'✓':'⚠'}</Text>
-            </View>
           </View>
+          {phases.length>6&&<ViewAllPill onPress={()=>setOpenModal('milestones')} count={phases.length} color={D.cyan}/>}
         </Card>
       </View>
+
+      {/* ══ Milestones detail modal ══ */}
+      {openModal==='milestones'&&(
+        <DetailModal title="Milestones — All Phases" color={D.cyan} onClose={()=>setOpenModal(null)}>
+          <View style={{gap:16}}>
+            {phases.map(phase=>{
+              const phMs=schedule.filter(m=>m.phase===phase);
+              const phDone=phMs.filter(m=>m.status==='Done').length;
+              const phPct=phMs.length>0?(phDone/phMs.length)*100:0;
+              const phCol=phPct===100?D.green:phMs.some(m=>m.status==='Delayed')?D.red:D.blue;
+              return(
+                <View key={phase} style={{gap:6}}>
+                  <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+                    <Text style={{fontSize:16,color:D.text,fontWeight:'700'}}>{phase}</Text>
+                    <Text style={{fontSize:16,color:phCol,fontWeight:'800'}}>{fmtP(phPct)}</Text>
+                  </View>
+                  <View style={{height:16,backgroundColor:D.bg,borderRadius:8}}>
+                    <View style={{height:16,width:`${phPct}%` as any,backgroundColor:phCol,borderRadius:8}}/>
+                  </View>
+                  <Text style={{fontSize:12,color:D.muted}}>{phDone} of {phMs.length} milestones done</Text>
+                </View>
+              );
+            })}
+          </View>
+        </DetailModal>
+      )}
 
       {/* ══ ROW 2: EVM S-Curve | CPI/SPI Trend | Budget by Category (full) ══ */}
       {evm.length>=2&&(
@@ -542,34 +566,70 @@ function ProjectDashboardTV({p,data,color}:{p:Project;data:SheetData;color:strin
             <SH label="Budget by Category" color={D.orange}/>
             <View style={{alignItems:'center'}}>
               <Donut
-                slices={catData.map((c,i)=>({v:c.ac,c:DC[i%7]}))}
+                slices={catData.map((c,i)=>({v:c.ac,c:DC[i%DC.length]}))}
                 size={108}
                 label={fmtM(catData.reduce((s,c)=>s+c.ac,0))}
                 sublabel="actual"
               />
             </View>
-            <ScrollView style={{flex:1}} showsVerticalScrollIndicator={false} contentContainerStyle={{gap:9}}>
-                {catData.map((c,i)=>{
+            <View style={{flex:1,gap:9}}>
+                {catData.slice(0,5).map((c,i)=>{
                   const over=c.ac>c.pl;
                   const pct=c.pl>0?Math.round((c.ac/c.pl)*100):0;
                   return(
                     <View key={c.cat} style={{gap:4}}>
                       <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
                         <View style={{flexDirection:'row',alignItems:'center',gap:7,flex:1}}>
-                          <View style={{width:9,height:9,borderRadius:4.5,backgroundColor:DC[i%7]}}/>
+                          <View style={{width:9,height:9,borderRadius:4.5,backgroundColor:DC[i%DC.length]}}/>
                           <Text style={{fontSize:13,color:D.text,flex:1,fontWeight:'600'}} numberOfLines={1}>{c.cat}</Text>
                         </View>
                         <Text style={{fontSize:13,fontWeight:'800',color:over?D.red:D.green}}>{pct}%</Text>
                       </View>
                       <View style={{height:14,backgroundColor:D.bg,borderRadius:7,overflow:'hidden'}}>
-                        <View style={{height:14,width:`${Math.min(pct,100)}%` as any,backgroundColor:over?D.red:DC[i%7],borderRadius:7}}/>
+                        <View style={{height:14,width:`${Math.min(pct,100)}%` as any,backgroundColor:over?D.red:DC[i%DC.length],borderRadius:7}}/>
                       </View>
                     </View>
                   );
                 })}
-            </ScrollView>
+            </View>
+            {catData.length>5&&<ViewAllPill onPress={()=>setOpenModal('budget')} count={catData.length} color={D.orange}/>}
           </Card>
         </View>
+      )}
+
+      {/* ══ Budget by Category detail modal ══ */}
+      {openModal==='budget'&&(
+        <DetailModal title="Budget by Category — Full Breakdown" color={D.orange} onClose={()=>setOpenModal(null)}>
+          <View style={{alignItems:'center',marginBottom:20}}>
+            <Donut
+              slices={catData.map((c,i)=>({v:c.ac,c:DC[i%DC.length]}))}
+              size={160}
+              label={fmtM(catData.reduce((s,c)=>s+c.ac,0))}
+              sublabel="actual"
+            />
+          </View>
+          <View style={{gap:14}}>
+            {catData.map((c,i)=>{
+              const over=c.ac>c.pl;
+              const pct=c.pl>0?Math.round((c.ac/c.pl)*100):0;
+              return(
+                <View key={c.cat} style={{gap:6}}>
+                  <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+                    <View style={{flexDirection:'row',alignItems:'center',gap:8,flex:1}}>
+                      <View style={{width:11,height:11,borderRadius:5.5,backgroundColor:DC[i%DC.length]}}/>
+                      <Text style={{fontSize:15,color:D.text,flex:1,fontWeight:'600'}} numberOfLines={1}>{c.cat}</Text>
+                    </View>
+                    <Text style={{fontSize:13,color:D.muted,marginRight:10}}>{fmtM(c.ac)} / {fmtM(c.pl)}</Text>
+                    <Text style={{fontSize:15,fontWeight:'800',color:over?D.red:D.green}}>{pct}%</Text>
+                  </View>
+                  <View style={{height:16,backgroundColor:D.bg,borderRadius:8,overflow:'hidden'}}>
+                    <View style={{height:16,width:`${Math.min(pct,100)}%` as any,backgroundColor:over?D.red:DC[i%DC.length],borderRadius:8}}/>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </DetailModal>
       )}
 
     </View>
@@ -945,6 +1005,46 @@ function ProjectTab({sheetId,color,tvMode}:{sheetId:string;color:string;tvMode:b
 }
 
 // Add project modal
+// ── Generic detail modal — full list view for a TV card ────────────
+function DetailModal({title,color,onClose,children}:{title:string;color:string;onClose:()=>void;children:React.ReactNode}) {
+  const {D} = useTheme();
+  return(
+    <View style={{position:'absolute',top:0,left:0,right:0,bottom:0,
+      backgroundColor:'rgba(0,0,0,0.55)',alignItems:'center',justifyContent:'center',zIndex:100} as any}>
+      <View style={{backgroundColor:D.panel,borderWidth:1,borderColor:D.border,borderRadius:18,
+        padding:28,width:'80%' as any,maxWidth:1100,maxHeight:'82%' as any,
+        shadowColor:'#000',shadowOffset:{width:0,height:10},shadowOpacity:0.25,shadowRadius:30,elevation:12}}>
+        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+          <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
+            <View style={{width:4,height:22,backgroundColor:color,borderRadius:2}}/>
+            <Text style={{fontSize:20,fontWeight:'900',color:D.text}}>{title}</Text>
+          </View>
+          <TouchableOpacity onPress={onClose}
+            style={{width:34,height:34,borderRadius:17,backgroundColor:D.bg,borderWidth:1,borderColor:D.border,
+              alignItems:'center',justifyContent:'center'}}>
+            <Text style={{fontSize:16,color:D.sub,fontWeight:'900',lineHeight:18}}>×</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {children}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+// ── "View all" pill, shown at the bottom of a truncated TV card ────
+function ViewAllPill({onPress,count,color}:{onPress:()=>void;count:number;color:string}) {
+  const {D} = useTheme();
+  return(
+    <TouchableOpacity onPress={onPress} style={{flexDirection:'row',alignItems:'center',justifyContent:'center',
+      gap:6,paddingVertical:9,borderRadius:9,backgroundColor:color+'18',borderWidth:1,borderColor:color+'44'}}>
+      <Text style={{fontSize:12,fontWeight:'800',color}}>View all {count}</Text>
+      <Text style={{fontSize:12,fontWeight:'900',color}}>→</Text>
+    </TouchableOpacity>
+  );
+}
+
 function AddProjectModal({onAdd,onClose}:{onAdd:(entry:SheetEntry)=>void;onClose:()=>void}) {
   const {D} = useTheme();
   const [url,setUrl] = useState('');

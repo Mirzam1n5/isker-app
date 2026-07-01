@@ -877,8 +877,8 @@ const TITLES: Record<string, string> = {
 };
 
 export default function DetailScreen() {
-  const { projectId, section } = useLocalSearchParams<{ projectId: string; section: string }>();
-  const { data, loading, error, refresh } = useSheetData();
+  const { projectId, section, sheetId } = useLocalSearchParams<{ projectId: string; section: string; sheetId?: string }>();
+  const { data, loading, error, refresh } = useSheetData(sheetId);
   const { isTV, padding } = useLayout();
 
   if (loading) return <LoadingScreen />;

@@ -1,46 +1,14 @@
-import React, { useEffect, useState, createContext, useContext, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Platform, useWindowDimensions, ScrollView, TouchableOpacity, TextInput, Pressable } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, G, Text as ST, Line, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useSheetData, SheetData, Project, Worker, BudgetRow, Milestone, EvmRow, Issue } from '../hooks/useSheetData';
-import { getJSON, setJSON } from '../hooks/useStorage';
-import { SHEET_ID as DEFAULT_SHEET_ID } from '../constants';
+import { ThemeContext, useTheme, usePersistedTheme, DARK, LIGHT, type Palette } from '../hooks/useTheme';
 
-// ── Theme palettes ──────────────────────────────────────────────────
-const LIGHT = {
-  bg:'#f5f6f8',       panel:'#ffffff',    card:'#ffffff',     border:'#e8e9ed',
-  text:'#15161a',     sub:'#6b6d76',      muted:'#9b9da6',
-  green:'#34b378',    greenDim:'#e6f7ee',
-  red:'#e8604a',      redDim:'#fdeae5',
-  yellow:'#e0a830',   yellowDim:'#fdf3e0',
-  blue:'#5aa8e8',     blueDim:'#e9f3fd',
-  accent:'#c4895a',   accentDim:'#f6ece1',
-  orange:'#f5a558',   orangeDim:'#fdf0e1',
-  cyan:'#5aa8e8',     cyanDim:'#e9f3fd',
-  shadow:'rgba(15,16,20,0.06)',
-};
-
-const DARK = {
-  bg:'#0e0f12',       panel:'#15161a',    card:'#1a1b20',     border:'#262830',
-  text:'#f0f1f4',     sub:'#8e9099',      muted:'#4a4c55',
-  green:'#5fa97f',    greenDim:'#13201a',
-  red:'#d97a5c',      redDim:'#241510',
-  yellow:'#d6a84f',   yellowDim:'#241e10',
-  blue:'#7fb0d4',     blueDim:'#10202c',
-  accent:'#c98a52',   accentDim:'#221a10',
-  orange:'#e8a667',   orangeDim:'#241c10',
-  cyan:'#7fb0d4',     cyanDim:'#10202c',
-  shadow:'rgba(0,0,0,0.45)',
-};
-
-type Palette = typeof LIGHT;
-
-// ── Theme context ─────────────────────────────────────────────────
-const ThemeContext = createContext<{D:Palette;isDark:boolean;toggleTheme:()=>void}>({
-  D:LIGHT, isDark:false, toggleTheme:()=>{},
-});
-function useTheme(){ return useContext(ThemeContext); }
+// ── API base URL ────────────────────────────────────────────────────
+const API_BASE = 'https://isker-app.onrender.com';
+const apiUrl = (path: string) => Platform.OS === 'web' ? path : `${API_BASE}${path}`;
 
 // ── Helpers (theme-aware, take D as first arg) ──────────────────────
 const getPC = (D:Palette) => [D.blue, D.accent, D.orange];
@@ -907,7 +875,6 @@ function parseSheetId(input:string):string|null {
 
 interface SheetEntry { id: string; label: string; }
 const SHEETS_STORAGE_KEY = 'isker_extra_sheets';
-const THEME_STORAGE_KEY = 'isker_theme_dark';
 
 // Shared hook: extra sheets list, synced with server API so all users
 // see the same list. On startup, fetches from /api/sheets. When adding/removing,
@@ -919,7 +886,7 @@ function useExtraSheets() {
   // Load from server on mount
   useEffect(() => {
     let mounted = true;
-    fetch('/api/sheets')
+    fetch(apiUrl('/api/sheets'))
       .then(r => r.json())
       .then(data => {
         if (mounted) { setExtraSheetsState(data); setLoaded(true); }
@@ -942,23 +909,6 @@ function useExtraSheets() {
   return { extraSheets, setExtraSheets, loaded };
 }
 
-// Shared hook: dark/light theme preference persisted across platforms.
-function usePersistedTheme() {
-  const [isDark, setIsDarkState] = useState(true);
-  useEffect(() => {
-    let mounted = true;
-    getJSON<boolean>(THEME_STORAGE_KEY, true).then(v => { if (mounted) setIsDarkState(v); });
-    return () => { mounted = false; };
-  }, []);
-  const setIsDark = useCallback((v: boolean | ((prev: boolean) => boolean)) => {
-    setIsDarkState(prev => {
-      const next = typeof v === 'function' ? (v as any)(prev) : v;
-      setJSON(THEME_STORAGE_KEY, next);
-      return next;
-    });
-  }, []);
-  return [isDark, setIsDark] as const;
-}
 
 // Single project data fetcher component
 function ProjectTab({sheetId,color,tvMode}:{sheetId:string;color:string;tvMode:boolean}) {
@@ -1047,6 +997,8 @@ function ViewAllPill({onPress,count,color}:{onPress:()=>void;count:number;color:
 
 function AddProjectModal({onAdd,onClose}:{onAdd:(entry:SheetEntry)=>void;onClose:()=>void}) {
   const {D} = useTheme();
+  const {width:winW} = useWindowDimensions();
+  const isSmall = winW < 520;
   const [url,setUrl] = useState('');
   const [label,setLabel] = useState('');
   const [err,setErr] = useState('');
@@ -1061,24 +1013,28 @@ function AddProjectModal({onAdd,onClose}:{onAdd:(entry:SheetEntry)=>void;onClose
 
   return(
     <View style={{position:'absolute',top:0,left:0,right:0,bottom:0,
-      backgroundColor:'rgba(0,0,0,0.45)',alignItems:'center',justifyContent:'center',zIndex:100} as any}>
+      backgroundColor:'rgba(0,0,0,0.45)',alignItems:'center',justifyContent:'center',zIndex:100,
+      paddingHorizontal:isSmall?16:0} as any}>
       <View style={{backgroundColor:D.panel,borderWidth:1,borderColor:D.border,borderRadius:12,
-        padding:28,width:480,gap:16,shadowColor:'#000',shadowOffset:{width:0,height:8},
+        padding:isSmall?18:28,width:isSmall?'100%':480,maxWidth:480,gap:isSmall?12:16,
+        shadowColor:'#000',shadowOffset:{width:0,height:8},
         shadowOpacity:0.2,shadowRadius:24,elevation:10}}>
-        <Text style={{fontSize:18,fontWeight:'900',color:D.text,letterSpacing:0.3}}>Add Project</Text>
-        <Text style={{fontSize:13,color:D.sub,lineHeight:18}}>
+        <Text style={{fontSize:isSmall?16:18,fontWeight:'900',color:D.text,letterSpacing:0.3}}>Add Project</Text>
+        <Text style={{fontSize:isSmall?12:13,color:D.sub,lineHeight:isSmall?16:18}}>
           Paste a Google Sheets link or Sheet ID. Make sure the sheet is set to{' '}
           <Text style={{color:D.blue,fontWeight:'700'}}>"Anyone with the link can view"</Text>.
         </Text>
         {/* Sheet URL input */}
         <View style={{gap:6}}>
           <Text style={{fontSize:11,color:D.muted,letterSpacing:1,textTransform:'uppercase'}}>Google Sheets URL or ID</Text>
-          <View style={{backgroundColor:D.bg,borderWidth:1,borderColor:D.border,borderRadius:8,paddingHorizontal:12,paddingVertical:10}}>
+          <View style={{backgroundColor:D.bg,borderWidth:1,borderColor:D.border,borderRadius:8,paddingHorizontal:12,paddingVertical:isSmall?8:10}}>
             <TextInput
               value={url}
               onChangeText={t=>{setUrl(t);setErr('');}}
               placeholder="https://docs.google.com/spreadsheets/d/..."
               placeholderTextColor={D.muted}
+              autoCapitalize="none"
+              autoCorrect={false}
               style={{fontSize:13,color:D.text,outline:'none'} as any}
             />
           </View>
@@ -1086,7 +1042,7 @@ function AddProjectModal({onAdd,onClose}:{onAdd:(entry:SheetEntry)=>void;onClose
         {/* Project name input */}
         <View style={{gap:6}}>
           <Text style={{fontSize:11,color:D.muted,letterSpacing:1,textTransform:'uppercase'}}>Project Name</Text>
-          <View style={{backgroundColor:D.bg,borderWidth:1,borderColor:D.border,borderRadius:8,paddingHorizontal:12,paddingVertical:10}}>
+          <View style={{backgroundColor:D.bg,borderWidth:1,borderColor:D.border,borderRadius:8,paddingHorizontal:12,paddingVertical:isSmall?8:10}}>
             <TextInput
               value={label}
               onChangeText={t=>{setLabel(t);setErr('');}}
@@ -1099,11 +1055,11 @@ function AddProjectModal({onAdd,onClose}:{onAdd:(entry:SheetEntry)=>void;onClose
         {err&&<Text style={{fontSize:12,color:D.red,fontWeight:'600'}}>{err}</Text>}
         <View style={{flexDirection:'row',gap:10,marginTop:4}}>
           <TouchableOpacity onPress={onClose}
-            style={{flex:1,paddingVertical:11,borderRadius:8,borderWidth:1,borderColor:D.border,alignItems:'center'}}>
+            style={{flex:1,paddingVertical:isSmall?9:11,borderRadius:8,borderWidth:1,borderColor:D.border,alignItems:'center'}}>
             <Text style={{fontSize:13,color:D.sub,fontWeight:'700'}}>Cancel</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleAdd}
-            style={{flex:1,paddingVertical:11,borderRadius:8,backgroundColor:D.blue,alignItems:'center'}}>
+            style={{flex:1,paddingVertical:isSmall?9:11,borderRadius:8,backgroundColor:D.blue,alignItems:'center'}}>
             <Text style={{fontSize:13,color:'#fff',fontWeight:'800'}}>Add Project</Text>
           </TouchableOpacity>
         </View>
@@ -1124,13 +1080,13 @@ function WebLayout({sheets,setSheets}:{sheets:SheetEntry[];setSheets:(s:SheetEnt
 
   const handleAddSheet = async (entry:SheetEntry) => {
     try {
-      const res = await fetch('/api/sheets', {
+      const res = await fetch(apiUrl('/api/sheets'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(entry),
       });
       if (res.ok) {
-        const updated = await fetch('/api/sheets').then(r => r.json());
+        const updated = await fetch(apiUrl('/api/sheets')).then(r => r.json());
         setSheets(updated);
         setActiveIdx(updated.length - 1);
       }
@@ -1143,9 +1099,9 @@ function WebLayout({sheets,setSheets}:{sheets:SheetEntry[];setSheets:(s:SheetEnt
     const sheetId = allTabs[idx]?.id;
     if (!sheetId) return;
     try {
-      const res = await fetch(`/api/sheets/${sheetId}`, { method: 'DELETE' });
+      const res = await fetch(apiUrl(`/api/sheets/${sheetId}`), { method: 'DELETE' });
       if (res.ok) {
-        const updated = await fetch('/api/sheets').then(r => r.json());
+        const updated = await fetch(apiUrl('/api/sheets')).then(r => r.json());
         setSheets(updated);
         if(activeIdx>=updated.length) setActiveIdx(Math.max(0, updated.length-1));
       }
@@ -1263,34 +1219,89 @@ function WebLayout({sheets,setSheets}:{sheets:SheetEntry[];setSheets:(s:SheetEnt
 // Shows the default sheet's projects PLUS a horizontal sheet-picker for
 // any extra Google Sheets the user added on web — so mobile and web
 // always reflect the same connected sheets (shared AsyncStorage state).
+// ── Single project card on the home feed — fetches its own sheet data ──
+function ProjectFeedCard({sheet,color}:{sheet:SheetEntry;color:string}) {
+  const {D} = useTheme();
+  const {data,loading,error,refresh} = useSheetData(sheet.id);
+
+  if(loading) return(
+    <View style={{backgroundColor:D.card,borderRadius:14,borderWidth:1,borderColor:D.border,
+      borderTopWidth:4,borderTopColor:color,padding:24,alignItems:'center',justifyContent:'center',minHeight:140}}>
+      <Text style={{color:D.muted,fontSize:12,letterSpacing:2}}>LOADING…</Text>
+    </View>
+  );
+
+  if(error||!data||!data.projects.length) return(
+    <View style={{backgroundColor:D.card,borderRadius:14,borderWidth:1,borderColor:D.border,
+      borderTopWidth:4,borderTopColor:D.red,padding:20,gap:10}}>
+      <Text style={{color:D.text,fontSize:15,fontWeight:'800'}}>{sheet.label}</Text>
+      <Text style={{color:D.red,fontSize:12}}>⚠ Failed to load data</Text>
+      {error&&<Text style={{color:D.muted,fontSize:10}} numberOfLines={2}>{error}</Text>}
+      <TouchableOpacity onPress={refresh}
+        style={{alignSelf:'flex-start',paddingHorizontal:14,paddingVertical:7,backgroundColor:D.blue,borderRadius:6}}>
+        <Text style={{color:'#fff',fontSize:12,fontWeight:'700'}}>Retry</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const p = data.projects[0];
+  const prog=num(p.progress_pct),cpi=num(p.cpi),spi=num(p.spi);
+
+  const router = useRouter();
+  return(
+    <TouchableOpacity
+      style={{backgroundColor:D.card,borderRadius:14,borderWidth:1,borderColor:D.border,
+        borderTopWidth:4,borderTopColor:color,padding:16,gap:12,
+        shadowColor:'rgba(0,0,0,0.06)',shadowOffset:{width:0,height:2},shadowOpacity:1,shadowRadius:6,elevation:2}}
+      onPress={()=>router.push({pathname:'/project/[id]', params:{id:p.project_id, sheetId:sheet.id}})}
+      activeOpacity={0.85}>
+      <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
+        <View style={{width:8,height:8,borderRadius:4,backgroundColor:sCol(D,p.status)}}/>
+        <Text style={{color:sCol(D,p.status),fontSize:10,fontWeight:'700',letterSpacing:1}}>{p.status.toUpperCase()}</Text>
+        <View style={{flex:1}}/>
+        <Ionicons name="chevron-forward" size={16} color={D.muted}/>
+      </View>
+      <Text style={{color:D.text,fontSize:18,fontWeight:'900'}}>{p.project_name}</Text>
+      <Text style={{color:D.muted,fontSize:12}}>{p.location}</Text>
+      <View style={{alignItems:'center'}}>
+        <ArcGauge pct={prog} color={color} size={140} label={fmtP(prog)} sublabel="progress"/>
+      </View>
+      <View style={{flexDirection:'row',gap:10}}>
+        <View style={{flex:1,backgroundColor:cpi>=1?D.greenDim:D.redDim,padding:10,alignItems:'center',
+          borderWidth:1,borderColor:cpi>=1?D.green:D.red,borderRadius:8}}>
+          <Text style={{fontSize:10,color:D.sub}}>CPI</Text>
+          <Text style={{fontSize:20,fontWeight:'900',color:iCol(D,cpi)}}>{cpi.toFixed(2)}</Text>
+        </View>
+        <View style={{flex:1,backgroundColor:spi>=1?D.greenDim:D.redDim,padding:10,alignItems:'center',
+          borderWidth:1,borderColor:spi>=1?D.green:D.red,borderRadius:8}}>
+          <Text style={{fontSize:10,color:D.sub}}>SPI</Text>
+          <Text style={{fontSize:20,fontWeight:'900',color:iCol(D,spi)}}>{spi.toFixed(2)}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 function MobileHome({sheets,setSheets}:{sheets:SheetEntry[];setSheets:(s:SheetEntry[]|((_:SheetEntry[])=>SheetEntry[]))=>void}) {
   const {D,isDark,toggleTheme} = useTheme();
   const PC = getPC(D);
-  const router=useRouter();
-  const [activeIdx,setActiveIdx]=useState(0);
   const [showAdd,setShowAdd]=useState(false);
-
-  const allTabs = sheets;
-  const activeSheet = allTabs[activeIdx] ?? allTabs[0];
 
   const handleAddSheet = async (entry:SheetEntry) => {
     try {
-      const res = await fetch('/api/sheets', {
+      const res = await fetch(apiUrl('/api/sheets'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(entry),
       });
       if (res.ok) {
-        const updated = await fetch('/api/sheets').then(r => r.json());
+        const updated = await fetch(apiUrl('/api/sheets')).then(r => r.json());
         setSheets(updated);
-        setActiveIdx(updated.length - 1);
       }
     } catch (e) {
       console.error('Failed to add sheet:', e);
     }
   };
-
-  const {data,loading,error,refresh} = useSheetData(activeSheet?.id);
 
   return(
     <View style={{flex:1,backgroundColor:D.bg}}>
@@ -1313,94 +1324,33 @@ function MobileHome({sheets,setSheets}:{sheets:SheetEntry[];setSheets:(s:SheetEn
 
       {showAdd && <AddProjectModal onAdd={handleAddSheet} onClose={()=>setShowAdd(false)}/>}
 
-      {/* Sheet tabs */}
-      {allTabs.length>1 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}
-          style={{maxHeight:46,borderBottomWidth:1,borderBottomColor:D.border,backgroundColor:D.panel}}
-          contentContainerStyle={{paddingHorizontal:10,gap:6,alignItems:'center'}}>
-          {allTabs.map((tab,i)=>{
-            const active=activeIdx===i;
-            return(
-              <Pressable key={tab.id+i} onPress={()=>setActiveIdx(i)}
-                style={{paddingHorizontal:12,paddingVertical:7,borderRadius:8,
-                  backgroundColor:active?D.blue:D.card,
-                  borderWidth:1,borderColor:active?D.blue:D.border}}>
-                <Text style={{fontSize:12,fontWeight:'700',color:active?'#fff':D.sub}} numberOfLines={1}>{tab.label}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      )}
-
-      {loading && (
-        <View style={{flex:1,alignItems:'center',justifyContent:'center'}}>
-          <Text style={{color:D.muted,fontSize:14,letterSpacing:2}}>LOADING SHEET...</Text>
-        </View>
-      )}
-
-      {!loading && error && (
-        <View style={{flex:1,alignItems:'center',justifyContent:'center',gap:10,padding:20}}>
-          <Text style={{color:D.red,fontSize:14,textAlign:'center'}}>⚠ {error}</Text>
-          <TouchableOpacity onPress={refresh} style={{paddingHorizontal:16,paddingVertical:8,backgroundColor:D.blue,borderRadius:6}}>
-            <Text style={{color:'#fff',fontSize:13,fontWeight:'700'}}>Retry</Text>
+      {/* Vertical feed — one card per connected project, no tabs */}
+      {sheets.length===0 ? (
+        <View style={{flex:1,alignItems:'center',justifyContent:'center',gap:14,padding:24}}>
+          <Text style={{color:D.muted,fontSize:14,textAlign:'center'}}>No projects connected yet.</Text>
+          <TouchableOpacity onPress={()=>setShowAdd(true)}
+            style={{paddingHorizontal:18,paddingVertical:10,backgroundColor:D.blue,borderRadius:8}}>
+            <Text style={{color:'#fff',fontSize:13,fontWeight:'800'}}>+ Add a project</Text>
           </TouchableOpacity>
         </View>
-      )}
-
-      {!loading && !error && data && (
+      ) : (
         <ScrollView style={{flex:1}} contentContainerStyle={{padding:14,gap:12}}>
-          {data.projects.map((p,i)=>{
-            const prog=num(p.progress_pct),cpi=num(p.cpi),spi=num(p.spi);
-            const col=PC[i%3];
-            return(
-              <TouchableOpacity key={p.project_id}
-                style={{backgroundColor:D.card,borderRadius:12,borderWidth:1,borderColor:D.border,
-                  borderTopWidth:4,borderTopColor:col,padding:16,gap:12,
-                  shadowColor:'rgba(0,0,0,0.06)',shadowOffset:{width:0,height:2},shadowOpacity:1,shadowRadius:6,elevation:2}}
-                onPress={()=>router.push({pathname:'/project/[id]',params:{id:p.project_id}})}>
-                <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
-                  <View style={{width:8,height:8,borderRadius:4,backgroundColor:sCol(D,p.status)}}/>
-                  <Text style={{color:sCol(D,p.status),fontSize:10,fontWeight:'700',letterSpacing:1}}>{p.status.toUpperCase()}</Text>
-                </View>
-                <Text style={{color:D.text,fontSize:18,fontWeight:'900'}}>{p.project_name}</Text>
-                <Text style={{color:D.muted,fontSize:12}}>{p.location}</Text>
-                <View style={{alignItems:'center'}}>
-                  <ArcGauge pct={prog} color={col} size={140} label={fmtP(prog)} sublabel="progress"/>
-                </View>
-                <View style={{flexDirection:'row',gap:10}}>
-                  <View style={{flex:1,backgroundColor:cpi>=1?D.greenDim:D.redDim,padding:10,alignItems:'center',
-                    borderWidth:1,borderColor:cpi>=1?D.green:D.red,borderRadius:8}}>
-                    <Text style={{fontSize:10,color:D.sub}}>CPI</Text>
-                    <Text style={{fontSize:20,fontWeight:'900',color:iCol(D,cpi)}}>{cpi.toFixed(2)}</Text>
-                  </View>
-                  <View style={{flex:1,backgroundColor:spi>=1?D.greenDim:D.redDim,padding:10,alignItems:'center',
-                    borderWidth:1,borderColor:spi>=1?D.green:D.red,borderRadius:8}}>
-                    <Text style={{fontSize:10,color:D.sub}}>SPI</Text>
-                    <Text style={{fontSize:20,fontWeight:'900',color:iCol(D,spi)}}>{spi.toFixed(2)}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+          {sheets.map((sheet,i)=>(
+            <ProjectFeedCard
+              key={sheet.id}
+              sheet={sheet}
+              color={PC[i%3]}
+            />
+          ))}
         </ScrollView>
       )}
     </View>
   );
 }
-
-// ════════════════════════════════════════════════════════════════
 // MAIN
 // ════════════════════════════════════════════════════════════════
 export default function HomeScreen() {
-  const [isDark,setIsDark]=usePersistedTheme();
-  const D = isDark?DARK:LIGHT;
-  const toggleTheme=()=>setIsDark(v=>!v);
-
-  return(
-    <ThemeContext.Provider value={{D,isDark,toggleTheme}}>
-      <HomeScreenInner/>
-    </ThemeContext.Provider>
-  );
+  return <HomeScreenInner/>;
 }
 
 function HomeScreenInner() {
@@ -1433,8 +1383,8 @@ function HomeScreenInner() {
       {showAdd&&(
         <AddProjectModal
           onAdd={async(entry)=>{
-            await fetch('/api/sheets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)});
-            const updated=await fetch('/api/sheets').then(r=>r.json());
+            await fetch(apiUrl('/api/sheets'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(entry)});
+            const updated=await fetch(apiUrl('/api/sheets')).then(r=>r.json());
             setExtraSheets(updated);
             setShowAdd(false);
           }}

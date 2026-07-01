@@ -1,205 +1,348 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import {
+  View, Text, ScrollView, TouchableOpacity,
+  StyleSheet, RefreshControl, ActivityIndicator,
+} from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSheetData } from '../../hooks/useSheetData';
-import { Badge, GaugeChart, DonutChart, Sparkline, LoadingScreen, ErrorScreen, SectionTitle } from '../../components/ui';
-import { COLORS, FONT } from '../../constants';
+import { useTheme } from '../../hooks/useTheme';
 
-const METRICS = [
-  { key: 'workers',   label: 'Workers',   icon: 'people-outline' as const },
-  { key: 'equipment', label: 'Equipment', icon: 'construct-outline' as const },
-  { key: 'budget',    label: 'Budget',    icon: 'cash-outline' as const },
-  { key: 'cpi',       label: 'CPI / SPI', icon: 'trending-up-outline' as const },
-  { key: 'schedule',  label: 'Schedule',  icon: 'calendar-outline' as const },
-  { key: 'issues',    label: 'Issues',    icon: 'warning-outline' as const },
-  { key: 'reports',   label: 'Reports',   icon: 'document-text-outline' as const },
-];
+// ─── Helpers ─────────────────────────────────────────────────────
+const num = (v: any) => parseFloat(String(v ?? 0).replace(/\s/g, '').replace(',', '.')) || 0;
+const fmtM = (v: number) =>
+  v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `$${(v / 1e3).toFixed(0)}K` : `$${v.toFixed(0)}`;
+const fmtP = (v: number) => `${Math.round(v)}%`;
 
-function MetricCard({ icon, label, value, sub, accent, onPress }: {
-  icon: any; label: string; value: string; sub: string; accent?: string; onPress: () => void;
-}) {
+// ─── Mini components ─────────────────────────────────────────────
+
+function ArcProgress({ pct, color, size = 120 }: { pct: number; color: string; size?: number }) {
+  const { D } = useTheme();
+  const r = size / 2 - 10;
+  const cx = size / 2;
+  const cy = size / 2 + 10;
+  const startAngle = -210;
+  const endAngle = 30;
+  const totalAngle = endAngle - startAngle;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const arcPath = (from: number, to: number) => {
+    const x1 = cx + r * Math.cos(toRad(from));
+    const y1 = cy + r * Math.sin(toRad(from));
+    const x2 = cx + r * Math.cos(toRad(to));
+    const y2 = cy + r * Math.sin(toRad(to));
+    const lg = to - from > 180 ? 1 : 0;
+    return `M${x1},${y1} A${r},${r} 0 ${lg} 1 ${x2},${y2}`;
+  };
+  const filled = startAngle + (totalAngle * Math.min(pct, 100)) / 100;
+
+  const { default: Svg, Path } = require('react-native-svg');
+
   return (
-    <TouchableOpacity style={styles.metricCard} onPress={onPress} activeOpacity={0.75}>
-      <View style={styles.metricTop}>
-        <View style={[styles.iconBox, { backgroundColor: accent ? accent + '22' : COLORS.muted + '33' }]}>
-          <Ionicons name={icon} size={18} color={accent ?? COLORS.white} />
-        </View>
-        <Ionicons name="chevron-forward" size={12} color={COLORS.midGray} />
+    <View style={{ alignItems: 'center' }}>
+      <Svg width={size} height={size * 0.75}>
+        <Path d={arcPath(startAngle, endAngle)} fill="none" stroke={D.border} strokeWidth={10} strokeLinecap="round" />
+        {pct > 0 && (
+          <Path d={arcPath(startAngle, filled)} fill="none" stroke={color} strokeWidth={10} strokeLinecap="round" />
+        )}
+      </Svg>
+      <Text style={{ position: 'absolute', bottom: 0, fontSize: 22, fontWeight: '900', color: D.text }}>
+        {fmtP(pct)}
+      </Text>
+    </View>
+  );
+}
+
+function KpiTile({ label, value, note, color }: { label: string; value: string; note?: string; color?: string }) {
+  const { D } = useTheme();
+  return (
+    <View style={{ flex: 1, backgroundColor: D.card, borderRadius: 10, borderWidth: 1, borderColor: D.border, padding: 12, gap: 2 }}>
+      <Text style={{ fontSize: 10, color: D.muted, letterSpacing: 1, textTransform: 'uppercase' }}>{label}</Text>
+      <Text style={{ fontSize: 20, fontWeight: '900', color: color ?? D.text }}>{value}</Text>
+      {note && <Text style={{ fontSize: 10, color: D.sub }}>{note}</Text>}
+    </View>
+  );
+}
+
+function SectionHeader({ label, color }: { label: string; color: string }) {
+  const { D } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+      <View style={{ width: 3, height: 14, backgroundColor: color, borderRadius: 2 }} />
+      <Text style={{ fontSize: 11, fontWeight: '800', color: D.sub, letterSpacing: 1.5, textTransform: 'uppercase' }}>{label}</Text>
+    </View>
+  );
+}
+
+function Card({ children, style }: { children: React.ReactNode; style?: any }) {
+  const { D } = useTheme();
+  return (
+    <View style={[{ backgroundColor: D.card, borderRadius: 12, borderWidth: 1, borderColor: D.border, padding: 14, marginBottom: 10 }, style]}>
+      {children}
+    </View>
+  );
+}
+
+function PhaseBar({ phase, pct, color }: { phase: string; pct: number; color: string }) {
+  const { D } = useTheme();
+  return (
+    <View style={{ gap: 4, marginBottom: 6 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 12, color: D.text }}>{phase}</Text>
+        <Text style={{ fontSize: 12, color, fontWeight: '700' }}>{fmtP(pct)}</Text>
       </View>
-      <Text style={styles.metricValue} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricSub} numberOfLines={1}>{sub}</Text>
-    </TouchableOpacity>
+      <View style={{ height: 7, backgroundColor: D.bg, borderRadius: 4 }}>
+        <View style={{ height: 7, width: `${pct}%`, backgroundColor: color, borderRadius: 4 }} />
+      </View>
+    </View>
   );
 }
 
+function CatBar({ cat, ac, pl, color }: { cat: string; ac: number; pl: number; color: string }) {
+  const { D } = useTheme();
+  const max = Math.max(pl, ac, 1);
+  const over = ac > pl;
+  const pct = pl > 0 ? Math.round((ac / pl) * 100) : 0;
+  return (
+    <View style={{ gap: 3, marginBottom: 8 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+          <Text style={{ fontSize: 12, color: D.text, flex: 1 }} numberOfLines={1}>{cat}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={{ fontSize: 11, color: D.muted }}>{fmtM(ac)}</Text>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: over ? D.red : D.green, minWidth: 36, textAlign: 'right' }}>{pct}%</Text>
+        </View>
+      </View>
+      <View style={{ height: 7, backgroundColor: D.bg, borderRadius: 4, overflow: 'hidden' }}>
+        <View style={{ position: 'absolute', top: 0, left: 0, height: 7, width: `${(pl / max) * 100}%`, backgroundColor: color, opacity: 0.25, borderRadius: 4 }} />
+        <View style={{ position: 'absolute', top: 0, left: 0, height: 7, width: `${Math.min((ac / max) * 100, 100)}%`, backgroundColor: over ? D.red : color, borderRadius: 4 }} />
+      </View>
+    </View>
+  );
+}
+
+// ─── Main Screen ─────────────────────────────────────────────────
 export default function ProjectScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, sheetId } = useLocalSearchParams<{ id: string; sheetId?: string }>();
   const router = useRouter();
-  const { data, loading, error, refresh } = useSheetData();
+  const { D } = useTheme();
+  const { data, loading, error, refresh } = useSheetData(sheetId);
 
-  if (loading) return <LoadingScreen />;
-  if (error || !data) return <ErrorScreen message={error ?? 'No data'} onRetry={refresh} />;
+  if (loading) return (
+    <View style={{ flex: 1, backgroundColor: D.bg, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <ActivityIndicator color={D.blue} size="large" />
+      <Text style={{ color: D.muted, fontSize: 13, letterSpacing: 2 }}>LOADING...</Text>
+    </View>
+  );
 
-  const project = data.projects.find((p) => p.project_id === id);
-  if (!project) return <ErrorScreen message="Project not found" onRetry={refresh} />;
+  if (error || !data) return (
+    <View style={{ flex: 1, backgroundColor: D.bg, alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <Text style={{ color: D.red, fontSize: 14 }}>⚠ {error ?? 'No data'}</Text>
+      <TouchableOpacity onPress={refresh} style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: D.blue, borderRadius: 8 }}>
+        <Text style={{ color: '#fff', fontWeight: '700' }}>Retry</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
-  const openIssues = data.issues.filter((i) => i.project_id === id && i.status === 'Open').length;
-  const recentReports = data.dailyReports.filter((r) => r.project_id === id).length;
-  const spent = Number(project.spent_to_date_usd);
-  const total = Number(project.total_budget_usd);
-  const progress = Number(project.progress_pct);
-  const cpi = Number(project.cpi);
-  const spi = Number(project.spi);
+  const p = data.projects.find(pr => pr.project_id === id) ?? data.projects[0];
+  if (!p) return (
+    <View style={{ flex: 1, backgroundColor: D.bg, alignItems: 'center', justifyContent: 'center' }}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <Text style={{ color: D.muted }}>Project not found</Text>
+    </View>
+  );
 
-  const evmRows = data.evm.filter((e) => e.project_id === id);
-  const cpiTrend = evmRows.map((e) => Number(e.cpi)).filter(Boolean);
+  const prog = num(p.progress_pct);
+  const cpi = num(p.cpi);
+  const spi = num(p.spi);
+  const budget = num(p.total_budget_usd);
+  const spent = num(p.spent_to_date_usd);
+  const iCol = (v: number) => v >= 1 ? D.green : D.red;
 
-  const budgetSegments = [
-    { value: spent, color: COLORS.white, label: 'Spent' },
-    { value: Math.max(0, total - spent), color: '#e8e8e8', label: 'Remaining' },
-  ];
+  // Milestones
+  const schedule = data.schedule.filter(m => m.project_id === id);
+  const phases = [...new Set(schedule.map(m => m.phase))].filter(Boolean) as string[];
+  const msDone = schedule.filter(m => m.status === 'Done').length;
+  const msInP = schedule.filter(m => m.status === 'In Progress').length;
+  const msDel = schedule.filter(m => m.status === 'Delayed').length;
 
-  const goDetail = (section: string) =>
-    router.push({ pathname: '/detail/[projectId]/[section]', params: { projectId: id, section } });
+  // Budget by category
+  const budgetRows = data.budget.filter(b => b.project_id === id);
+  const catMap: Record<string, { pl: number; ac: number }> = {};
+  budgetRows.forEach(b => {
+    if (!catMap[b.category]) catMap[b.category] = { pl: 0, ac: 0 };
+    catMap[b.category].pl += num(b.planned_usd);
+    catMap[b.category].ac += num(b.actual_usd);
+  });
+  const catData = Object.entries(catMap).map(([cat, v]) => ({ cat, ...v })).sort((a, b) => b.ac - a.ac);
+  const DC = [D.blue, D.orange, D.green, D.yellow, D.red, '#9b7fd4', '#4fb8a8'];
 
-  const getVal = (key: string) => {
-    if (key === 'workers')   return String(project.workers_count);
-    if (key === 'equipment') return String(project.equipment_count);
-    if (key === 'budget')    return `$${(spent / 1e6).toFixed(1)}M`;
-    if (key === 'cpi')       return `${cpi} / ${spi}`;
-    if (key === 'schedule')  return project.end_date;
-    if (key === 'issues')    return String(openIssues);
-    if (key === 'reports')   return String(recentReports);
-    return '—';
-  };
+  // EVM
+  const evm = data.evm.filter(e => e.project_id === id);
+  const latestEvm = evm[evm.length - 1];
+  const evmMonths = evm.map(e => String(e.month).slice(5));
+  const pvS = evm.map(e => num(e.pv_usd));
+  const evS = evm.map(e => num(e.ev_usd));
+  const acS = evm.map(e => num(e.ac_usd));
+  const cpiS = evm.map(e => num(e.cpi));
+  const spiS = evm.map(e => num(e.spi));
 
-  const getSub = (key: string) => {
-    if (key === 'workers')   return 'on site today';
-    if (key === 'equipment') return 'units active';
-    if (key === 'budget')    return `of $${(total / 1e6).toFixed(1)}M total`;
-    if (key === 'cpi')       return 'cost · schedule index';
-    if (key === 'schedule')  return 'deadline';
-    if (key === 'issues')    return 'open issues';
-    if (key === 'reports')   return 'daily logs filed';
-    return '';
-  };
-
-  const getAccent = (key: string) => {
-    if (key === 'issues' && openIssues > 0) return COLORS.red;
-    if (key === 'cpi') return cpi >= 1 ? COLORS.green : COLORS.red;
-    return undefined;
+  // Simple SVG line chart
+  const MiniLine = ({ values, color, h = 80 }: { values: number[]; color: string; h?: number }) => {
+    if (values.length < 2) return null;
+    const { default: Svg, Path, Line } = require('react-native-svg');
+    const mn = Math.min(...values);
+    const mx = Math.max(...values);
+    const range = mx - mn || 1;
+    const w = 280;
+    const pad = 8;
+    const ew = (w - pad * 2) / (values.length - 1);
+    const pts = values.map((v, i) => [pad + i * ew, pad + (1 - (v - mn) / range) * (h - pad * 2)] as [number, number]);
+    const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ');
+    return (
+      <Svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+        <Line x1={pad} y1={pad + (1 - (1 - mn) / range) * (h - pad * 2)} x2={w - pad} y2={pad + (1 - (1 - mn) / range) * (h - pad * 2)} stroke={D.muted} strokeWidth={0.8} strokeDasharray="4,3" />
+        <Path d={d} fill="none" stroke={color} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+      </Svg>
+    );
   };
 
   return (
-    <>
-      <Stack.Screen options={{ title: project.project_name }} />
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
-      >
-        {/* Hero card */}
-        <View style={styles.heroCard}>
-          <View style={styles.heroTop}>
-            <View>
-              <Text style={styles.heroSub}>Overall Progress</Text>
-              <Badge label={project.status} />
+    <View style={{ flex: 1, backgroundColor: D.bg }}>
+      <Stack.Screen options={{
+        headerShown: true,
+        title: p.project_name,
+        headerStyle: { backgroundColor: D.panel },
+        headerTitleStyle: { color: D.text, fontWeight: '800', fontSize: 15 },
+        headerTintColor: D.text,
+        headerShadowVisible: false,
+      }} />
+
+      <ScrollView contentContainerStyle={{ padding: 14, paddingBottom: 40, gap: 10 }} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}>
+
+        {/* ── Header card ── */}
+        <Card>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: D.green + '20', borderRadius: 5, borderWidth: 1, borderColor: D.green }}>
+              <Text style={{ fontSize: 10, color: D.green, fontWeight: '800', letterSpacing: 1 }}>{p.status.toUpperCase()}</Text>
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                <Ionicons name="location-outline" size={11} color={COLORS.midGray} />
-                <Text style={styles.heroMeta}>{project.location}</Text>
+            <Text style={{ fontSize: 11, color: D.muted }}>{p.location}</Text>
+          </View>
+
+          <ArcProgress pct={prog} color={D.blue} size={140} />
+
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+            <KpiTile label="Budget" value={fmtM(budget)} color={D.text} />
+            <KpiTile label="Spent" value={fmtM(spent)} note={`${Math.round((spent / budget) * 100)}% used`} color={spent > budget ? D.red : D.text} />
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+            <KpiTile label="CPI" value={cpi.toFixed(2)} note={cpi >= 1 ? 'On budget' : 'Over budget'} color={iCol(cpi)} />
+            <KpiTile label="SPI" value={spi.toFixed(2)} note={spi >= 1 ? 'On schedule' : 'Behind'} color={iCol(spi)} />
+          </View>
+        </Card>
+
+        {/* ── Milestones ── */}
+        <Card>
+          <SectionHeader label="Milestones" color={D.cyan} />
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+            {[{ l: 'Done', v: msDone, c: D.green }, { l: 'In Prog', v: msInP, c: D.blue }, { l: 'Delayed', v: msDel, c: msDel > 0 ? D.red : D.muted }].map(item => (
+              <View key={item.l} style={{ flex: 1, alignItems: 'center', backgroundColor: item.c + '18', borderWidth: 1, borderColor: item.c + '44', borderRadius: 8, paddingVertical: 8 }}>
+                <Text style={{ fontSize: 9, color: D.muted, letterSpacing: 1 }}>{item.l.toUpperCase()}</Text>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: item.c }}>{item.v}</Text>
               </View>
-              <Text style={styles.heroMeta}>{project.client}</Text>
-            </View>
+            ))}
           </View>
-
-          <View style={{ alignItems: 'center' }}>
-            <GaugeChart value={progress} max={100} label={`${progress}%`} sublabel="Against Plan" size={200} />
+          {phases.map(phase => {
+            const phMs = schedule.filter(m => m.phase === phase);
+            const phDone = phMs.filter(m => m.status === 'Done').length;
+            const phPct = phMs.length > 0 ? (phDone / phMs.length) * 100 : 0;
+            const phCol = phPct === 100 ? D.green : phMs.some(m => m.status === 'Delayed') ? D.red : D.blue;
+            return <PhaseBar key={phase} phase={phase} pct={phPct} color={phCol} />;
+          })}
+          <View style={{ backgroundColor: spi >= 1 ? D.greenDim : D.redDim, borderWidth: 1, borderColor: spi >= 1 ? D.green : D.red, padding: 8, borderRadius: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+            <Text style={{ fontSize: 10, color: D.sub }}>SCHEDULE SPI</Text>
+            <Text style={{ fontSize: 16, fontWeight: '900', color: iCol(spi) }}>{spi.toFixed(2)} {spi >= 1 ? '✓' : '⚠'}</Text>
           </View>
+        </Card>
 
-          {/* Index row */}
-          <View style={styles.indexRow}>
-            <View style={styles.indexChip}>
-              <Text style={styles.indexLabel}>CPI</Text>
-              <Text style={[styles.indexVal, { color: cpi >= 1 ? COLORS.green : COLORS.red }]}>{cpi}</Text>
-              {cpiTrend.length > 1 && (
-                <Sparkline data={cpiTrend} color={cpi >= 1 ? COLORS.green : COLORS.red} width={64} height={28} />
-              )}
+        {/* ── Budget by Category ── */}
+        {catData.length > 0 && (
+          <Card>
+            <SectionHeader label="Budget by Category" color={D.orange} />
+            {catData.map((c, i) => (
+              <CatBar key={c.cat} cat={c.cat} ac={c.ac} pl={c.pl} color={DC[i % 7]} />
+            ))}
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ width: 12, height: 6, backgroundColor: D.blue, opacity: 0.3, borderRadius: 2 }} />
+                <Text style={{ fontSize: 9, color: D.muted }}>Planned</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ width: 12, height: 6, backgroundColor: D.blue, borderRadius: 2 }} />
+                <Text style={{ fontSize: 9, color: D.muted }}>Actual</Text>
+              </View>
             </View>
-            <View style={styles.sep} />
-            <View style={styles.indexChip}>
-              <Text style={styles.indexLabel}>SPI</Text>
-              <Text style={[styles.indexVal, { color: spi >= 1 ? COLORS.green : COLORS.red }]}>{spi}</Text>
-            </View>
-            <View style={styles.sep} />
-            <View style={styles.indexChip}>
-              <Text style={styles.indexLabel}>Budget</Text>
-              <DonutChart
-                segments={budgetSegments}
-                size={52}
-                label={`${Math.round((spent / total) * 100)}%`}
-              />
-            </View>
-          </View>
-        </View>
+          </Card>
+        )}
 
-        <SectionTitle style={{ marginTop: 8 }}>Metrics</SectionTitle>
+        {/* ── EVM S-Curve ── */}
+        {evm.length >= 2 && (
+          <Card>
+            <SectionHeader label="EVM S-Curve" color={D.blue} />
+            {latestEvm && (
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                {[
+                  { l: 'EAC', v: fmtM(num(latestEvm.eac_usd)), c: num(latestEvm.eac_usd) > num(latestEvm.bac_usd) ? D.red : D.green },
+                  { l: 'CV', v: `${num(latestEvm.cv_usd) >= 0 ? '+' : ''}${fmtM(num(latestEvm.cv_usd))}`, c: num(latestEvm.cv_usd) >= 0 ? D.green : D.red },
+                  { l: 'SV', v: `${num(latestEvm.sv_usd) >= 0 ? '+' : ''}${fmtM(num(latestEvm.sv_usd))}`, c: num(latestEvm.sv_usd) >= 0 ? D.green : D.red },
+                ].map(item => (
+                  <View key={item.l} style={{ flex: 1, backgroundColor: D.bg, borderWidth: 1, borderColor: D.border, padding: 8, alignItems: 'center', borderRadius: 7 }}>
+                    <Text style={{ fontSize: 9, color: D.muted, letterSpacing: 1 }}>{item.l}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: item.c }}>{item.v}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <Text style={{ fontSize: 10, color: D.muted, marginBottom: 4 }}>Planned Value</Text>
+            <MiniLine values={pvS} color={D.blue} />
+            <Text style={{ fontSize: 10, color: D.muted, marginTop: 8, marginBottom: 4 }}>Earned Value</Text>
+            <MiniLine values={evS} color={D.green} />
+            <Text style={{ fontSize: 10, color: D.muted, marginTop: 8, marginBottom: 4 }}>Actual Cost</Text>
+            <MiniLine values={acS} color={D.red} />
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+              {[{ l: 'Planned Value', c: D.blue }, { l: 'Earned Value', c: D.green }, { l: 'Actual Cost', c: D.red }].map(it => (
+                <View key={it.l} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ width: 12, height: 3, backgroundColor: it.c, borderRadius: 2 }} />
+                  <Text style={{ fontSize: 9, color: D.muted }}>{it.l}</Text>
+                </View>
+              ))}
+            </View>
+          </Card>
+        )}
 
-        <View style={styles.grid}>
-          {METRICS.map((m) => (
-            <MetricCard
-              key={m.key}
-              icon={m.icon}
-              label={m.label}
-              value={getVal(m.key)}
-              sub={getSub(m.key)}
-              accent={getAccent(m.key)}
-              onPress={() => goDetail(m.key)}
-            />
-          ))}
-        </View>
+        {/* ── CPI & SPI Trend ── */}
+        {evm.length >= 2 && (
+          <Card>
+            <SectionHeader label="CPI & SPI Trend" color={D.green} />
+            <Text style={{ fontSize: 10, color: D.muted, marginBottom: 4 }}>CPI</Text>
+            <MiniLine values={cpiS} color={D.green} />
+            <Text style={{ fontSize: 10, color: D.muted, marginTop: 8, marginBottom: 4 }}>SPI</Text>
+            <MiniLine values={spiS} color={D.yellow} />
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+              {[{ l: 'CPI', c: D.green }, { l: 'SPI', c: D.yellow }].map(it => (
+                <View key={it.l} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ width: 12, height: 3, backgroundColor: it.c, borderRadius: 2 }} />
+                  <Text style={{ fontSize: 9, color: D.muted }}>{it.l}</Text>
+                </View>
+              ))}
+            </View>
+          </Card>
+        )}
+
       </ScrollView>
-    </>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.black },
-  content: { padding: 16, paddingBottom: 40 },
-  heroCard: {
-    backgroundColor: COLORS.lightGray, borderWidth: 1, borderRadius: 14,
-    borderColor: COLORS.border, padding: 16, marginBottom: 8,
-  },
-  heroTop: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'flex-start', marginBottom: 4,
-  },
-  heroSub: { fontSize: FONT.size.xs, color: COLORS.sub, marginBottom: 4 },
-  heroMeta: { fontSize: FONT.size.xs, color: COLORS.sub, marginTop: 2 },
-  indexRow: {
-    flexDirection: 'row', borderTopWidth: 1,
-    borderTopColor: COLORS.border, marginTop: 8, paddingTop: 12,
-    alignItems: 'center',
-  },
-  indexChip: { flex: 1, alignItems: 'center', gap: 4 },
-  sep: { width: 1, height: 52, backgroundColor: COLORS.border },
-  indexLabel: { fontSize: FONT.size.xs, color: COLORS.sub },
-  indexVal: { fontSize: 20, fontWeight: '700' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  metricCard: {
-    width: '47.5%',
-    backgroundColor: COLORS.lightGray, borderWidth: 1, borderRadius: 14,
-    borderColor: COLORS.border, padding: 14,
-  },
-  metricTop: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 10,
-  },
-  iconBox: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  metricValue: { fontSize: 20, fontWeight: '600', color: COLORS.white, marginBottom: 2 },
-  metricLabel: { fontSize: FONT.size.xs, fontWeight: '600', color: COLORS.white },
-  metricSub: { fontSize: FONT.size.xs, color: COLORS.sub, marginTop: 2 },
-});
